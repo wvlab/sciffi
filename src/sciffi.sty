@@ -1,0 +1,105 @@
+\ProvidesPackage{sciffi}[2025/01/04 alpha.1]
+% TODO: add "\NeedsTeXFormat"
+\RequirePackage{luatexbase}
+
+\directlua{
+    table.insert(package.loaders, function(name)
+    if name:match("^sciffi") then
+      local file = kpse.find_file(name .. ".lua")
+      if file then
+        return loadfile(file)
+      end
+    end
+  end)
+  require("sciffi-base")
+}
+
+\newcatcodetable\sciffi@savedtable
+\newtoks\sciffi@interpretator
+\newcommand{\sciffi@exec}[2]{
+  \directlua{
+    sciffi
+      .interpretators["\luaescapestring{#1}"]
+      .execute([[\unexpanded{#2}]])
+  }
+}
+
+% TODO: add comments to this clusterfuck
+% TODO: generate catcode tables from lua
+
+\begingroup \catcode`\~\active \expandafter\endgroup
+\@firstofone{%
+  \newcommand \sciffi@execute [1] {%
+    \begingroup
+    \escapechar92
+    \newlinechar10
+    \edef\\{\string\\}%
+    \edef~{\string~}%
+    \let\%=\sciffi@percentchar
+    \let\#=\sciffi@sharpchar
+    \expandafter\expandafter\expandafter\endgroup
+    \sciffi@exec{\the\sciffi@interpretator}{#1}}
+}
+
+\begingroup \escapechar\m@ne \edef\aux{\endgroup
+  \unexpanded{\newcommand\sciffi@percentchar}{\string\%}%
+  \unexpanded{\newcommand\sciffi@sharpchar}{\string\#}%
+}\aux
+
+\newcommand*\sciffi@begin {%
+  \begingroup
+  \escapechar92
+  \luatexcatcodetable\sciffi@table@soft\relax
+  \edef\sciffi@endmark{\string\end{\@currenvir}}%
+  \expandafter\def \expandafter\sciffi@endmark \expandafter{%
+    \luatexscantextokens \expandafter{\sciffi@endmark}}%
+  \newtoks\sciffi@lines 
+  \newcommand*\sciffi@addline [1] {%
+    \sciffi@lines\expandafter{\the\sciffi@lines##1^^J}}%
+  \sciffi@grab@body}
+
+\newcommand\sciffi@end{%
+  \edef\sciffi@next{%
+    \noexpand\sciffi@execute{\the\sciffi@lines}%
+    \noexpand\end{\@currenvir}}%
+  \expandafter\endgroup
+  \sciffi@next}
+
+\newcommand \sciffi@grab@body {%
+  \sciffi@lines{}%
+  \endlinechar10
+  \sciffi@grab@lines}
+
+\long\def\sciffi@grab@lines#1^^J{%
+  \def\sciffi@curr{#1}%
+  \ifx\sciffi@curr\sciffi@endmark
+    \expandafter\sciffi@end
+  \else
+    \expandafter\sciffi@addline\expandafter{\sciffi@curr}%
+    \expandafter\sciffi@grab@lines
+  \fi}
+
+\newluatexcatcodetable \sciffi@table@soft
+\begingroup
+\ifdefined\SetCatcodeRange \else
+  \let\SetCatcodeRange\setcatcoderange
+\fi
+\setluatexcatcodetable \sciffi@table@soft {%
+  \luatexcatcodetable\CatcodeTableOther
+  \catcode 92  0
+  \catcode 123 1
+  \catcode 125 2
+  \SetCatcodeRange {65}{90} {11}
+  \SetCatcodeRange {97}{122}{11}
+}
+\endgroup
+
+\newenvironment{sciffi}[1]{
+    \savecatcodetable\sciffi@savedtable
+    \sciffi@interpretator={#1}
+    \sciffi@begin
+}{
+    \directlua{sciffi.flush()}
+}
+
+\endinput
