@@ -9,7 +9,7 @@ sciffi.interpretators.python = {
             return "Error creating temporary file"
         end
 
-        file:write(code)
+        file:write(sciffi.helpers.deindent(code))
         file:close()
 
         -- TODO: make an interpretator executable an option
