@@ -1,5 +1,4 @@
 module = "sciffi"
-version = "alpha"
 tdsroot = "luatex"
 
 installfiles = {
@@ -22,19 +21,11 @@ typesetfiles = {
     "doc/*.tex"
 }
 
-ctanfiles = {
-    "*.sty",
-    "doc",
-    "src",
-    "bindings",
-    "build.lua"
-}
-
 uploadconfig = {
     author = "wvlab",
     summary = "",
     pkg = module,
-    version = version,
+    version = "alpha",
     uploader = "wvlab",
     email = "me@wvlab.xyz",
     note = "",
