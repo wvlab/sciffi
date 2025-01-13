@@ -1,0 +1,6 @@
+[submodule "types/l3build"]
+	path = types/l3build
+	url = https://github.com/wvlab/l3build.git
+[submodule "types/LuaTeX_Lua-API"]
+	path = types/LuaTeX_Lua-API
+	url = https://github.com/Josef-Friedrich/LuaTeX_Lua-API
