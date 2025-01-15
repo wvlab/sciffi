@@ -97,6 +97,7 @@ end
 
 --- @class (exact) Helpers
 --- @field deindent fun(code: string): string
+--- @field errformat fun(opts: { portal: string | nil, interpretator: string | nil, msg: string }): string
 sciffi.helpers = {}
 
 --- @param code string
@@ -117,6 +118,21 @@ function sciffi.helpers.deindent(code)
     end)
 
     return result
+end
+
+--- @param opts { portal: string | nil, interpretator: string | nil, msg: string }
+--- @return string
+function sciffi.helpers.errformat(opts)
+    local errmsg = "sciffi"
+    if opts.portal then
+        errmsg = errmsg .. "." .. opts.portal
+    end
+
+    if opts.interpretator then
+        errmsg = errmsg .. "[" .. opts.interpretator .. "]"
+    end
+
+    return errmsg .. ": " .. opts.msg
 end
 
 return sciffi
