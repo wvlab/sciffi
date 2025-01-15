@@ -2,27 +2,32 @@ require("sciffi-base")
 
 sciffi.interpretators.python = {
     execute = function(code)
-        local temp_file = os.tmpname() .. ".py"
-        local file = io.open(temp_file, "w")
-
-        if not file then
-            return "Error creating temporary file"
+        local portal, err = sciffi.portals.simple.setup(
+            {
+                interpretator = "python",
+                file = os.tmpname() .. ".py",
+                code = sciffi.helpers.deindent(code),
+                command = "python"
+            }
+        )
+        if err then
+            -- TODO: refactor when warning error api
+            print(err)
+            return
         end
 
-        file:write(sciffi.helpers.deindent(code))
-        file:close()
-
-        -- TODO: make an interpretator executable an option
-        local command = "python " .. temp_file
-
-        local file = io.popen(command, "r")
-        if not file then
-            return "Error executing command"
+        local result, err = portal:launch()
+        if err then
+            -- TODO: refactor when warning error api
+            print(err)
+            return
         end
 
-        local output = file:read("*a")
-        file:close()
-        sciffi.write(output)
-        return nil
+        local err = sciffi.helpers.handle_portal_result(result)
+        if err then
+            -- TODO: refactor when warning error api
+            print(err)
+            return
+        end
     end
 }
