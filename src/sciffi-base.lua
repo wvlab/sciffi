@@ -13,9 +13,10 @@ end
 --- @field execute fun(code: string): nil
 
 --- @class (exact) SciFFI
---- @field interpretators { [string]: Interpretator }
---- @field helpers Helpers
---- @field env SciFFIEnv
+--- @field public interpretators { [string]: Interpretator }
+--- @field public helpers Helpers
+--- @field public portals Portal[]
+--- @field private env SciFFIEnv
 --- @field private output string
 --- @field public write fun(text: string): nil
 --- @field private flush fun(): nil
@@ -134,5 +135,14 @@ function sciffi.helpers.errformat(opts)
 
     return errmsg .. ": " .. opts.msg
 end
+
+--- @alias PortalLaunchResult { [integer] : PortalLaunchResultField }
+--- @alias PortalLaunchResultField
+--- | ["tex", string]
+
+--- @class Portal
+--- @field setup fun(opts: table): (Portal | nil, nil | string)
+--- @field launch fun(): (PortalLaunchResult | nil, nil | string)
+sciffi.portals = {}
 
 return sciffi
