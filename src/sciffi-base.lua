@@ -99,6 +99,7 @@ end
 --- @class (exact) Helpers
 --- @field deindent fun(code: string): string
 --- @field errformat fun(opts: { portal: string | nil, interpretator: string | nil, msg: string }): string
+--- @field handle_portal_result fun(result: PortalLaunchResult): string?
 sciffi.helpers = {}
 
 --- @param code string
@@ -134,6 +135,18 @@ function sciffi.helpers.errformat(opts)
     end
 
     return errmsg .. ": " .. opts.msg
+end
+
+--- @param result PortalLaunchResult
+--- @return string? error
+--- @nodiscard
+function sciffi.helpers.handle_portal_result(result)
+    for _, v in ipairs(result) do
+        local tag, value = table.unpack(v)
+        if tag == "tex" then
+            sciffi.write(value)
+        end
+    end
 end
 
 --- @alias PortalLaunchResult { [integer] : PortalLaunchResultField }
