@@ -145,4 +145,69 @@ end
 --- @field launch fun(): (PortalLaunchResult | nil, nil | string)
 sciffi.portals = {}
 
+--- @class SimplePortal : Portal
+--- @field file string
+--- @field code string | nil
+--- @field interpretator string
+--- @field command string
+sciffi.portals.simple = {}
+
+--- @class SimplePortalOpts
+--- @field file string
+--- @field code string | nil
+--- @field interpretator string
+--- @field command string
+
+--- @param opts SimplePortalOpts
+--- @return SimplePortal portal
+--- @return string? error
+--- @nodiscard
+function sciffi.portals.simple.setup(opts)
+    local portal = {
+        setup = sciffi.portals.simple.setup,
+        launch = sciffi.portals.simple.launch,
+        file = opts.file,
+        code = opts.code,
+        command = opts.command,
+        interpretator = opts.interpretator
+    }
+    return portal, nil
+end
+
+--- @param self SimplePortal
+--- @return PortalLaunchResult
+--- @return string? error
+--- @nodiscard
+function sciffi.portals.simple.launch(self)
+    local code = self.code
+    if code then
+        local file = io.open(self.file, "w")
+        if not file then
+            return { nil, sciffi.helpers.errformat({
+                interpretator = self.interpretator,
+                portal = "SimplePortal",
+                msg = "Error creating temporary file with code at " .. file
+            }) }
+        end
+
+        file:write(code)
+        file:close()
+    end
+
+    local file = io.popen(self.command .. " " .. self.file, "r")
+    if not file then
+        return { nil, sciffi.helpers.errformat({
+            interpretator = self.interpretator,
+            portal = "SimplePortal",
+            msg = "Error executing command " .. self.command
+        }) }
+    end
+
+    -- TODO: Include warnings and other stuff from stderr
+
+    local output = file:read("*a")
+    file:close()
+    return { { "tex", output } }
+end
+
 return sciffi
