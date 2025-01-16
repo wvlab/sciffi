@@ -17,27 +17,9 @@ end
 --- @field public helpers Helpers
 --- @field public portals Portal[]
 --- @field private env SciFFIEnv
---- @field private output string
---- @field public write fun(text: string): nil
---- @field private flush fun(): nil
 sciffi = {
     interpretators = {},
-    output = "",
 }
-
---- @param text string
---- @return nil
-function sciffi.write(text)
-    sciffi.output = sciffi.output .. text
-end
-
---- @return nil
-function sciffi.flush()
-    local output, _ = sciffi.output:gsub("\n", " ")
-    tex.print(luatexbase.catcodetables["sciffi@savedtable"], output)
-
-    sciffi.output = ""
-end
 
 --- @class SciFFIEnv
 --- @field lines string[]
@@ -93,11 +75,11 @@ function sciffi.env.close()
 
     callback.previous_callback = nil
     sciffi.interpretators[sciffi.env.interpretator].execute(table.concat(sciffi.env.lines, "\n"))
-    sciffi.flush()
 end
 
 --- @class (exact) Helpers
 --- @field deindent fun(code: string): string
+--- @field print fun(output: string): nil
 --- @field errformat fun(opts: { portal: string | nil, interpretator: string | nil, msg: string }): string
 --- @field handle_portal_result fun(result: PortalLaunchResult): string?
 sciffi.helpers = {}
@@ -122,6 +104,14 @@ function sciffi.helpers.deindent(code)
     return result
 end
 
+--- @param output string
+--- @return nil
+function sciffi.helpers.print(output)
+    for line in output:gmatch("(.-)\n") do
+        tex.print(line)
+    end
+end
+
 --- @param opts { portal: string | nil, interpretator: string | nil, msg: string }
 --- @return string
 function sciffi.helpers.errformat(opts)
@@ -144,7 +134,7 @@ function sciffi.helpers.handle_portal_result(result)
     for _, v in ipairs(result) do
         local tag, value = table.unpack(v)
         if tag == "tex" then
-            sciffi.write(value)
+            sciffi.helpers.print(value)
         end
     end
 end
