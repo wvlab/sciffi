@@ -75,6 +75,7 @@ function sciffi.env.close()
 
     callback.previous_callback = nil
     sciffi.interpretators[sciffi.env.interpretator].execute(table.concat(sciffi.env.lines, "\n"))
+    sciffi.env.lines = {}
 end
 
 --- @class (exact) Helpers
