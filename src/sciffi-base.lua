@@ -21,6 +21,8 @@ sciffi = {
     interpretators = {},
 }
 
+
+-- TODO: test for subfiles
 --- @class SciFFIEnv
 --- @field lines string[]
 --- @field private interpretator string
@@ -36,15 +38,20 @@ sciffi.env = {
 --- @return nil
 function sciffi.env.start(interpretator)
     if not sciffi.interpretators[interpretator] then
-        -- TODO: add error printing with future api
+        sciffi.helpers.log(
+            "error",
+            "sciffi environment cannot find interpretator \"" .. interpretator .. '"'
+        )
         return
     end
     sciffi.env.interpretator = interpretator
     sciffi.env.previous_callback = callback.find("process_input_buffer")
     local _, err = callback.register("process_input_buffer", sciffi.env.callback)
     if err then
-        -- TODO: add error printing with future api
-        texio.write_nl("con", err)
+        sciffi.helpers.log(
+            "error",
+            "sciffi environment cannot register `process_input_buffer` callback"
+        )
         sciffi.env.close()
         return
     end
@@ -69,7 +76,10 @@ end
 function sciffi.env.close()
     local _, err = callback.register("process_input_buffer", sciffi.env.previous_callback)
     if err then
-        -- TODO: add error printing with future api
+        sciffi.helpers.log(
+            "error",
+            "sciffi environment cannot re-register previous `process_input_buffer` callback"
+        )
         return
     end
 
@@ -78,11 +88,21 @@ function sciffi.env.close()
     sciffi.env.lines = {}
 end
 
+--- @alias SciFFILogLevel
+--- | "none"
+--- | "debug"
+--- | "info"
+--- | "warning"
+--- | "error"
+--- | "critical"
+--- | string
+
 --- @class (exact) Helpers
 --- @field deindent fun(code: string): string
 --- @field print fun(output: string): nil
 --- @field errformat fun(opts: { portal: string | nil, interpretator: string | nil, msg: string }): string
 --- @field handle_portal_result fun(result: PortalLaunchResult): string?
+--- @field log fun(level: SciFFILogLevel, msg: string): nil
 sciffi.helpers = {}
 
 --- @param code string
@@ -113,16 +133,30 @@ function sciffi.helpers.print(output)
     end
 end
 
+--- @param level SciFFILogLevel
+--- @param msg string
+--- @return nil
+function sciffi.helpers.log(level, msg)
+    -- TODO: configuring?
+    local target = "term and log"
+    if level == "debug" then
+        target = "log"
+    end
+
+    -- TODO: colors?
+    texio.write_nl(target, "[" .. level .. "]" .. msg)
+end
+
 --- @param opts { portal: string | nil, interpretator: string | nil, msg: string }
 --- @return string
 function sciffi.helpers.errformat(opts)
-    local errmsg = "sciffi"
+    local errmsg = ""
     if opts.portal then
-        errmsg = errmsg .. "." .. opts.portal
+        errmsg = errmsg .. opts.portal
     end
 
     if opts.interpretator then
-        errmsg = errmsg .. "[" .. opts.interpretator .. "]"
+        errmsg = errmsg .. "<" .. opts.interpretator .. ">"
     end
 
     return errmsg .. ": " .. opts.msg
@@ -133,16 +167,20 @@ end
 --- @nodiscard
 function sciffi.helpers.handle_portal_result(result)
     for _, v in ipairs(result) do
-        local tag, value = table.unpack(v)
-        if tag == "tex" then
-            sciffi.helpers.print(value)
+        if v.tag == "tex" then
+            sciffi.helpers.print(v.value)
+        elseif v.tag == "log" then
+            sciffi.helpers.log(v.value.level, v.value.msg)
         end
     end
 end
 
+-- TODO: narrowing?
+
 --- @alias PortalLaunchResult { [integer] : PortalLaunchResultField }
 --- @alias PortalLaunchResultField
---- | ["tex", string]
+--- | { tag : "tex", value : string}
+--- | { tag : "log", value : { level : string, msg: string }}
 
 --- @class Portal
 --- @field setup fun(opts: table): (Portal | nil, nil | string)
