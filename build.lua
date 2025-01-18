@@ -36,6 +36,7 @@ uploadconfig = {
 }
 
 checkengines = { "luatex" }
-checkconfigs = {}
+typesetexe = "lualatex"
+typesetopts = "--shell-escape --socket --interaction=nonstopmode"
 
 cleanfiles = { "*.log", "*.aux", "*.toc", "*.out" }
