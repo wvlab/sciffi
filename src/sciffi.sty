@@ -1,5 +1,5 @@
 \ProvidesPackage{sciffi}[2025/01/04 alpha.1]
-% TODO: add "\NeedsTeXFormat"
+\NeedsTeXFormat{LaTeX2e}[2020-10-01]
 \RequirePackage{luatexbase}
 
 \directlua{
@@ -14,7 +14,7 @@
   require("sciffi-base")
 }
 
-\newenvironment{sciffi}[1]{
+\NewDocumentEnvironment{sciffi}{moO{}}{
     \directlua{sciffi.env.start("#1")}
 }{
     \directlua{sciffi.env.close()}
