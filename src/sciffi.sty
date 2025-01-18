@@ -14,7 +14,7 @@
   require("sciffi-base")
 }
 
-\NewDocumentEnvironment{sciffi}{moO{}}{
+\NewDocumentEnvironment{sciffi}{m !O{}}{
     \directlua{sciffi.env.start("#1")}
 }{
     \directlua{sciffi.env.close()}

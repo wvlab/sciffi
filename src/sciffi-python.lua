@@ -10,6 +10,7 @@ sciffi.interpretators.python = {
                 command = "python"
             }
         )
+
         if err then
             sciffi.helpers.log("error", err)
             return

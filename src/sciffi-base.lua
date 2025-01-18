@@ -249,7 +249,7 @@ function sciffi.portals.simple.launch(self)
 
     local output = file:read("*a")
     file:close()
-    return { { "tex", output } }
+    return { { tag = "tex", value = output } }
 end
 
 return sciffi
