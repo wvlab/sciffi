@@ -1,11 +1,11 @@
 -- TODO: check for shell escape
--- TODO: add message and warning API
 
 -- FOR SOME REASON UNKNOWN TO ME THEY FORBID TO CALL `callback.register`
 -- this trick ensures this function will be present
 if luatexbase then
     local _luatexbase = luatexbase
     luatexbase.uninstall()
+    -- @diagnostic disable-next-line: lowercase-global
     luatexbase = _luatexbase
 end
 
@@ -192,13 +192,15 @@ sciffi.portals = {}
 --- @field code string | nil
 --- @field interpretator string
 --- @field command string
+--- @field stderrfile string?
 sciffi.portals.simple = {}
 
 --- @class SimplePortalOpts
 --- @field file string
---- @field code string | nil
+--- @field code string?
 --- @field interpretator string
 --- @field command string
+--- @field stderrfile string
 
 --- @param opts SimplePortalOpts
 --- @return SimplePortal portal
@@ -209,6 +211,7 @@ function sciffi.portals.simple.setup(opts)
         setup = sciffi.portals.simple.setup,
         launch = sciffi.portals.simple.launch,
         file = opts.file,
+        stderrfile = opts.stderrfile or os.tmpname(),
         code = opts.code,
         command = opts.command,
         interpretator = opts.interpretator
@@ -225,31 +228,54 @@ function sciffi.portals.simple.launch(self)
     if code then
         local file = io.open(self.file, "w")
         if not file then
-            return { nil, sciffi.helpers.errformat({
+            return {}, sciffi.helpers.errformat({
                 interpretator = self.interpretator,
                 portal = "SimplePortal",
                 msg = "Error creating temporary file with code at " .. file
-            }) }
+            })
         end
 
         file:write(code)
         file:close()
     end
 
-    local file = io.popen(self.command .. " " .. self.file, "r")
+    local com = string.format("%s %s 2> %s", self.command, self.file, self.stderrfile)
+    local file = io.popen(com, "r")
     if not file then
-        return { nil, sciffi.helpers.errformat({
+        return {}, sciffi.helpers.errformat({
             interpretator = self.interpretator,
             portal = "SimplePortal",
             msg = "Error executing command " .. self.command
-        }) }
+        })
     end
-
-    -- TODO: Include warnings and other stuff from stderr
 
     local output = file:read("*a")
     file:close()
-    return { { tag = "tex", value = output } }
+
+    local stderroutput = "Couldn't open stderr file"
+    file = io.open(self.stderrfile, "r")
+    if file then
+        stderroutput = file:read("*a")
+        file:close()
+    end
+
+    local errmsg = sciffi.helpers.errformat({
+        interpretator = self.interpretator,
+        portal = "SimplePortal",
+        msg = stderroutput
+    })
+
+    return {
+        {
+            tag = "tex", value = output
+        },
+        {
+            tag = "log",
+            value = {
+                level = "warning", msg = errmsg
+            }
+        }
+    }, nil
 end
 
 return sciffi
