@@ -4,3 +4,6 @@
 [submodule "types/LuaTeX_Lua-API"]
 	path = types/LuaTeX_Lua-API
 	url = https://github.com/Josef-Friedrich/LuaTeX_Lua-API
+[submodule "types/luasocket"]
+	path = types/luasocket
+	url = https://github.com/LuaCATS/luasocket
