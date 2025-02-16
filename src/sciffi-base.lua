@@ -97,8 +97,11 @@ end
 --- | "critical"
 --- | string
 
+-- TODO: make a helper function which creates "base" portal skeleton
+
 --- @class (exact) Helpers
 --- @field deindent fun(code: string): string
+--- @field save_snippet fun(code: string, extension: string?, path: string?): (string | nil, nil | string)
 --- @field print fun(output: string): nil
 --- @field errformat fun(opts: { portal: string | nil, interpretator: string | nil, msg: string }): string
 --- @field handle_portal_result fun(result: PortalLaunchResult): string?
@@ -123,6 +126,23 @@ function sciffi.helpers.deindent(code)
     end)
 
     return result
+end
+
+--- @param code string
+--- @param extension string?
+--- @param path string?
+--- @return string?
+--- @return string?
+function sciffi.helpers.save_snippet(code, extension, path)
+    path = path or (os.tmpname() .. (extension or ""))
+    local file = io.open(path, "w")
+    if not file then
+        return nil, "Error creating temporary file with code at " .. file
+    end
+
+    file:write(code)
+    file:close()
+    return path, nil
 end
 
 --- @param output string
