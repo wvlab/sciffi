@@ -10,13 +10,15 @@ if luatexbase then
 end
 
 --- @class Interpretator
---- @field execute fun(code: string): nil
+--- @field execute_snippet fun(code: string, options: string | table): nil
+--- @field execute_script fun(filepath: string, options: string | table): nil
 
 --- @class (exact) SciFFI
 --- @field public interpretators { [string]: Interpretator }
 --- @field public helpers Helpers
 --- @field public portals Portal[]
 --- @field private env SciFFIEnv
+--- @field private execute_script fun(interpretator, script_path, options): nil
 sciffi = {
     interpretators = {},
 }
@@ -84,8 +86,12 @@ function sciffi.env.close()
     end
 
     callback.previous_callback = nil
-    sciffi.interpretators[sciffi.env.interpretator].execute(table.concat(sciffi.env.lines, "\n"))
+    sciffi.interpretators[sciffi.env.interpretator].execute_snippet(table.concat(sciffi.env.lines, "\n"), {})
     sciffi.env.lines = {}
+end
+
+function sciffi.execute_script(interpretator, script_path, options)
+    return sciffi.interpretators[interpretator].execute_script(script_path, options)
 end
 
 --- @alias SciFFILogLevel

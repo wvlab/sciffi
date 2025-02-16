@@ -20,4 +20,8 @@
     \directlua{sciffi.env.close()}
 }
 
+\NewDocumentCommand{\sciffiscript}{mm!O{}}{
+    \directlua{sciffi.execute_script("#1", "#2", "#3")}
+}
+
 \endinput
