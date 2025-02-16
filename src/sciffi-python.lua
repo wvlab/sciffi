@@ -2,10 +2,17 @@ require("sciffi-base")
 
 sciffi.interpretators.python = {
     execute = function(code)
+        local filepath, err = sciffi.helpers.save_snippet(sciffi.helpers.deindent(code), ".py")
+        if err then
+           --- @cast filepath string
+           sciffi.helpers.log("error", err)
+           return
+        end
+
         local portal, err = sciffi.portals.simple.setup(
             {
                 interpretator = "python",
-                file = os.tmpname() .. ".py",
+                filepath = filepath,
                 code = sciffi.helpers.deindent(code),
                 command = "python"
             }

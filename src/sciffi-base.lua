@@ -99,13 +99,7 @@ end
 
 -- TODO: make a helper function which creates "base" portal skeleton
 
---- @class (exact) Helpers
---- @field deindent fun(code: string): string
---- @field save_snippet fun(code: string, extension: string?, path: string?): (string | nil, nil | string)
---- @field print fun(output: string): nil
---- @field errformat fun(opts: { portal: string | nil, interpretator: string | nil, msg: string }): string
---- @field handle_portal_result fun(result: PortalLaunchResult): string?
---- @field log fun(level: SciFFILogLevel, msg: string): nil
+--- @class Helpers
 sciffi.helpers = {}
 
 --- @param code string
@@ -129,10 +123,11 @@ function sciffi.helpers.deindent(code)
 end
 
 --- @param code string
---- @param extension string?
---- @param path string?
---- @return string?
---- @return string?
+--- @param extension? string
+--- @param path? string
+--- @return string
+--- @return nil
+--- @overload fun(code: string, extension?: string, path?: string): (nil, string)
 function sciffi.helpers.save_snippet(code, extension, path)
     path = path or (os.tmpname() .. (extension or ""))
     local file = io.open(path, "w")
@@ -208,7 +203,7 @@ end
 sciffi.portals = {}
 
 --- @class SimplePortal : Portal
---- @field file string
+--- @field filepath string
 --- @field code string | nil
 --- @field interpretator string
 --- @field command string
@@ -216,7 +211,7 @@ sciffi.portals = {}
 sciffi.portals.simple = {}
 
 --- @class SimplePortalOpts
---- @field file string
+--- @field filepath string
 --- @field code string?
 --- @field interpretator string
 --- @field command string
@@ -230,7 +225,7 @@ function sciffi.portals.simple.setup(opts)
     local portal = {
         setup = sciffi.portals.simple.setup,
         launch = sciffi.portals.simple.launch,
-        file = opts.file,
+        filepath = opts.filepath,
         stderrfile = opts.stderrfile or os.tmpname(),
         code = opts.code,
         command = opts.command,
@@ -244,22 +239,7 @@ end
 --- @return string? error
 --- @nodiscard
 function sciffi.portals.simple.launch(self)
-    local code = self.code
-    if code then
-        local file = io.open(self.file, "w")
-        if not file then
-            return {}, sciffi.helpers.errformat({
-                interpretator = self.interpretator,
-                portal = "SimplePortal",
-                msg = "Error creating temporary file with code at " .. file
-            })
-        end
-
-        file:write(code)
-        file:close()
-    end
-
-    local com = string.format("%s %s 2> %s", self.command, self.file, self.stderrfile)
+    local com = string.format("%s %s 2> %s", self.command, self.filepath, self.stderrfile)
     local file = io.popen(com, "r")
     if not file then
         return {}, sciffi.helpers.errformat({
