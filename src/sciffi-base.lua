@@ -192,7 +192,7 @@ sciffi.portals = {}
 --- @field code string | nil
 --- @field interpretator string
 --- @field command string
---- @field stderrfile string?
+--- @field stderrfile string
 sciffi.portals.simple = {}
 
 --- @class SimplePortalOpts
@@ -200,7 +200,7 @@ sciffi.portals.simple = {}
 --- @field code string?
 --- @field interpretator string
 --- @field command string
---- @field stderrfile string
+--- @field stderrfile string?
 
 --- @param opts SimplePortalOpts
 --- @return SimplePortal portal
