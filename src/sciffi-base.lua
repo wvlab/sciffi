@@ -128,6 +128,30 @@ function sciffi.helpers.deindent(code)
     return result
 end
 
+--- @param options string | table
+--- @return table
+function sciffi.helpers.parse_options(options)
+    if type(options) == "table" then
+        return options
+    end
+
+    if type(options) ~= "string" then
+        return {}
+    end
+
+    local result = {}
+    options = options:gsub("%s*=%s*", "="):gsub("%s*,%s*", ",")
+    for key, value in options:gmatch("([^,=]+)=([^,=]+)") do
+        key = key:match("^%s*(.-)%s*$") or key
+        value = value:match("^%s*(.-)%s*$") or value
+        if key ~= "" and value ~= "" then
+            result[key] = value
+        end
+    end
+
+    return result
+end
+
 --- @param code string
 --- @param extension? string
 --- @param path? string
@@ -244,7 +268,7 @@ end
 --- @return PortalLaunchResult
 --- @return string? error
 --- @nodiscard
-function sciffi.portals.simple.launch(self)
+function sciffi.portals.simple:launch()
     local com = string.format("%s %s 2> %s", self.command, self.filepath, self.stderrfile)
     local file = io.popen(com, "r")
     if not file then
