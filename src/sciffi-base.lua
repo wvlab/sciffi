@@ -317,4 +317,57 @@ function sciffi.portals.simple:launch()
     }, nil
 end
 
+--- @class GenericInterpretator
+sciffi.interpretators.generic = {}
+
+function sciffi.interpretators.generic.execute_snippet(code, options)
+    options = sciffi.helpers.parse_options(options)
+
+    local filepath, err = sciffi.helpers.save_snippet(
+        sciffi.helpers.deindent(code), options.extension
+    )
+
+    if err then
+        --- @cast filepath string
+        sciffi.helpers.log("error", err)
+        return
+    end
+
+    sciffi.interpretators.generic.execute_script(filepath, options)
+end
+
+function sciffi.interpretators.generic.execute_script(filepath, options)
+    options = sciffi.helpers.parse_options(options)
+
+    if not options.command then
+        sciffi.helpers.log("error", sciffi.helpers.errformat({
+            interpretator = options.name or "generic",
+            msg = "Command must not be empty"
+        }))
+    end
+
+    local portal, err = sciffi.portals.simple.setup({
+        interpretator = options.name or "generic",
+        filepath = filepath,
+        command = options.command,
+    })
+
+    if err then
+        sciffi.helpers.log("error", err)
+        return
+    end
+
+    local result, err = portal:launch()
+    if err then
+        sciffi.helpers.log("error", err)
+        return
+    end
+
+    local err = sciffi.helpers.handle_portal_result(result)
+    if err then
+        sciffi.helpers.log("error", err)
+        return
+    end
+end
+
 return sciffi
