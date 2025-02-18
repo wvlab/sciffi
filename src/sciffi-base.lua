@@ -304,17 +304,22 @@ function sciffi.portals.simple:launch()
         msg = stderroutput
     })
 
-    return {
+    local result = {
         {
             tag = "tex", value = output
         },
-        {
+    }
+
+    if stderroutput ~= "" then
+        table.insert(result, {
             tag = "log",
             value = {
                 level = "warning", msg = errmsg
-            }
-        }
-    }, nil
+            },
+        })
+    end
+
+    return result, nil
 end
 
 --- @class GenericInterpretator
