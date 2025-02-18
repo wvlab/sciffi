@@ -27,18 +27,22 @@ sciffi = {
 -- TODO: test for subfiles
 --- @class SciFFIEnv
 --- @field lines string[]
+--- @field options string
 --- @field private interpretator string
 --- @field private previous_callback function | nil
 --- @field private callback fun(line: string): string | nil
---- @field private start fun(interpretator: string): nil
+--- @field private start fun(interpretator: string, options: string): nil
 --- @field private close fun(): nil
 sciffi.env = {
-    lines = {}
+    lines = {},
+    options = ""
 }
 
 --- @param interpretator string
+--- @param options string
 --- @return nil
-function sciffi.env.start(interpretator)
+function sciffi.env.start(interpretator, options)
+    sciffi.env.options = options
     if not sciffi.interpretators[interpretator] then
         sciffi.helpers.log(
             "error",
@@ -46,6 +50,7 @@ function sciffi.env.start(interpretator)
         )
         return
     end
+
     sciffi.env.interpretator = interpretator
     sciffi.env.previous_callback = callback.find("process_input_buffer")
     local _, err = callback.register("process_input_buffer", sciffi.env.callback)
@@ -86,7 +91,11 @@ function sciffi.env.close()
     end
 
     callback.previous_callback = nil
-    sciffi.interpretators[sciffi.env.interpretator].execute_snippet(table.concat(sciffi.env.lines, "\n"), {})
+    sciffi.interpretators[sciffi.env.interpretator].execute_snippet(
+        table.concat(sciffi.env.lines, "\n"),
+        sciffi.env.options
+    )
+
     sciffi.env.lines = {}
 end
 

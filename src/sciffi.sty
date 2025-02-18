@@ -15,7 +15,7 @@
 }
 
 \NewDocumentEnvironment{sciffi}{m !O{}}{
-    \directlua{sciffi.env.start("#1")}
+    \directlua{sciffi.env.start("#1", "#2")}
 }{
     \directlua{sciffi.env.close()}
 }
