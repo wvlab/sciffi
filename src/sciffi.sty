@@ -24,4 +24,12 @@
     \directlua{sciffi.execute_script("#1", "#2", "#3")}
 }
 
+\newread\sciffidummyfile
+\NewDocumentCommand{\sciffidepend}{m}{
+    \IfFileExists{#1}{
+        \openin\sciffidummyfile=#1
+        \closein\sciffidummyfile
+    }{}
+}
+
 \endinput
