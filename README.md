@@ -14,6 +14,14 @@ cross-language workflows
 
 ## Usage
 
+> [!IMPORTANT]
+> For saving code snippets sciffi uses `os.tmpname()`, which creates global
+> path. By default MikTeX doesn't allow to write there, so in order to use
+> sciffi environment set `AllowUnsafeOutputFiles` to true
+> ```bash
+> initexmf --set-config-value=[Core]AllowUnsafeOutputFiles=t
+> ```
+
 **Example: Python**
 
 ```latex
