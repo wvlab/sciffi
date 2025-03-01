@@ -1,0 +1,13 @@
+\ProvidesPackage{sciffi-python-matplotlib}[2025/01/04 alpha.0]
+\RequirePackage{sciffi-python}
+\RequirePackage{pgfplots}
+
+\ExplSyntaxOn
+\msg_new:nnnn {sciffi-python-matplotlib}{use-python-interpretator}{Use python interpretator for this operation}
+\ExplSyntaxOff
+
+\directlua{
+	require("sciffi-python-matplotlib")
+}
+
+\endinput
