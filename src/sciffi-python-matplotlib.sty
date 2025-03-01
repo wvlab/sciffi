@@ -10,4 +10,10 @@
 	require("sciffi-python-matplotlib")
 }
 
+\NewDocumentEnvironment{matplotlib}{!O{}}{
+    \directlua{sciffi.env.start("matplotlib", "python-matplotlib", "#1")}
+}{
+    \directlua{sciffi.env.close()}
+}
+
 \endinput

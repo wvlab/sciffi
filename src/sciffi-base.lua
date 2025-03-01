@@ -26,22 +26,25 @@ sciffi = {
 
 -- TODO: test for subfiles
 --- @class SciFFIEnv
+--- @field envname string
 --- @field lines string[]
 --- @field options string
 --- @field private interpretator string
 --- @field private previous_callback function | nil
 --- @field private callback fun(line: string): string | nil
---- @field private start fun(interpretator: string, options: string): nil
+--- @field private start fun(envname: string, interpretator: string, options: string): nil
 --- @field private close fun(): nil
 sciffi.env = {
     lines = {},
     options = ""
 }
 
+--- @param envname @string
 --- @param interpretator string
 --- @param options string
 --- @return nil
-function sciffi.env.start(interpretator, options)
+function sciffi.env.start(envname, interpretator, options)
+    sciffi.env.envname = envname
     sciffi.env.options = options
     if not sciffi.interpretators[interpretator] then
         sciffi.helpers.log(
@@ -67,7 +70,7 @@ end
 --- @param line string
 --- @return string | nil
 function sciffi.env.callback(line)
-    local pos = line:find("\\end{sciffi}")
+    local pos = line:find(string.format([[\end{%s}]], sciffi.env.envname))
     if not pos then
         table.insert(sciffi.env.lines, line)
         return ""
