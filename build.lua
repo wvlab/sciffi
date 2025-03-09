@@ -4,6 +4,7 @@ tdsroot = "luatex"
 installfiles = {
     "sciffi.sty",
     "sciffi-python.sty",
+    "sciffi-cosmo.lua",
     "sciffi-python-matplotlib.sty",
     "sciffi-base.lua",
     "sciffi-python.lua",
