@@ -14,15 +14,14 @@ end
 --- @field execute_script fun(filepath: string, options: string | table): nil
 
 --- @class (exact) SciFFI
---- @field public interpretators { [string]: Interpretator }
+--- @field public interpretators table<string, Interpretator>
+--- @field public portals table<string, Portal>
 --- @field public helpers Helpers
---- @field public portals Portal[]
 --- @field private env SciFFIEnv
 --- @field private execute_script fun(interpretator, script_path, options): nil
 sciffi = {
     interpretators = {},
 }
-
 
 -- TODO: test for subfiles
 --- @class SciFFIEnv
@@ -39,10 +38,9 @@ sciffi.env = {
     options = ""
 }
 
---- @param envname @string
+--- @param envname string
 --- @param interpretator string
 --- @param options string
---- @return nil
 function sciffi.env.start(envname, interpretator, options)
     sciffi.env.envname = envname
     sciffi.env.options = options
@@ -239,25 +237,22 @@ end
 --- | { tag : "tex", value : string}
 --- | { tag : "log", value : { level : string, msg: string }}
 
---- @class Portal
---- @field setup fun(opts: table): (Portal | nil, nil | string)
+--- @generic PortalOpts
+--- @class Portal<PortalOpts>
+--- @field setup fun(opts: `PortalOpts`): (SimplePortal | nil, nil | string)
 --- @field launch fun(): (PortalLaunchResult | nil, nil | string)
+
+--- @type table<string, Portal>
 sciffi.portals = {}
 
---- @class SimplePortal : Portal
---- @field filepath string
---- @field code string | nil
---- @field interpretator string
---- @field command string
---- @field stderrfile string
-sciffi.portals.simple = {}
-
 --- @class SimplePortalOpts
---- @field filepath string
---- @field code string?
 --- @field interpretator string
 --- @field command string
+--- @field filepath string
 --- @field stderrfile string?
+
+--- @class SimplePortal : SimplePortalOpts, Portal<SimplePortalOpts>,
+sciffi.portals.simple = {}
 
 --- @param opts SimplePortalOpts
 --- @return SimplePortal portal
@@ -267,11 +262,10 @@ function sciffi.portals.simple.setup(opts)
     local portal = {
         setup = sciffi.portals.simple.setup,
         launch = sciffi.portals.simple.launch,
+        interpretator = opts.interpretator,
+        command = opts.command,
         filepath = opts.filepath,
         stderrfile = opts.stderrfile or os.tmpname(),
-        code = opts.code,
-        command = opts.command,
-        interpretator = opts.interpretator
     }
     return portal, nil
 end
@@ -287,7 +281,7 @@ function sciffi.portals.simple:launch()
         return {}, sciffi.helpers.errformat({
             interpretator = self.interpretator,
             portal = "SimplePortal",
-            msg = "Error executing command " .. self.command
+            msg = ("Error executing command: %s"):format(self.command),
         })
     end
 
@@ -360,8 +354,8 @@ function sciffi.interpretators.generic.execute_script(filepath, options)
         command = options.command,
     })
 
-    if err then
-        sciffi.helpers.log("error", err)
+    if err or not portal then
+        sciffi.helpers.log("error", err or "")
         return
     end
 
