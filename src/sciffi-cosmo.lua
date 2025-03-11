@@ -2,29 +2,42 @@ require("sciffi-base")
 local socket = require("socket")
 local ffi = require("ffi")
 
+--- @class Pid
+--- @class SpawnFileActions
+--- @class SpawnAttributes
+
 ffi.cdef([[
     typedef int32_t pid_t; // i am not entirely sure about this
 
     typedef struct {} posix_spawn_file_actions_t;
     typedef struct {} posix_spawnattr_t;
 
-    int posix_spawnp(pid_t *pid, const char *path,
-                    const posix_spawn_file_actions_t *file_actions,
-                    const posix_spawnattr_t *attrp,
-                    char *const argv[], char *const envp[]);
+    // see man posix_spawn(3)
+    int posix_spawnp(
+        pid_t *pid, const char *path,
+        const posix_spawn_file_actions_t *file_actions,
+        const posix_spawnattr_t *attrp,
+        char *const argv[], char *const envp[]
+    );
 
     int posix_spawn_file_actions_init(posix_spawn_file_actions_t *file_actions);
     int posix_spawn_file_actions_destroy(posix_spawn_file_actions_t *file_actions);
 
     int posix_spawnattr_init(posix_spawnattr_t *attr);
     int posix_spawnattr_destroy(posix_spawnattr_t *attr);
-
-    int kill(pid_t pid, int sig);
 ]])
 
+--- Parses all current environment variables and places into a table
+--- If an error occurs returns empty table and description of an error
+---
+--- Dependent on the os:
+---   * Reads /proc/self/environ on linux
+--- @private
+--- @return string[] environ
+--- @return string? error
 local function environ()
-    -- TODO: add error handling
     local env = {}
+
     if ffi.os == "Linux" then
         local f = io.open("/proc/self/environ")
         if not f then
@@ -35,63 +48,134 @@ local function environ()
         end
         f:close()
     else
-        error()
+        return {}, ("can't read environment on OS: %s"):format(ffi.os)
     end
 
-    return env
+    return env, nil
 end
 
-local function spawn(command, args, env)
-    local status
-    local pid = ffi.new("pid_t[1]")
+--- @private
+--- @return Pid
+local function new_pid()
+    return ffi.cast(
+        "pid_t *",
+        ffi.new("pid_t[1]")
+    )
+end
 
-    local file_actions = ffi.new("posix_spawn_file_actions_t")
-    status = ffi.C.posix_spawn_file_actions_init(file_actions)
+--- @private
+--- @return SpawnFileActions
+--- @return integer? errorcode
+--- @return string? error
+local function new_file_actions()
+    --- @type SpawnFileActions
+    local actions = ffi.new("posix_spawn_file_actions_t")
+
+    --- @type integer
+    local status = ffi.C.posix_spawn_file_actions_init(actions)
+
     if status ~= 0 then
-        error("posix_spawn_file_actions_init failed with status: " .. status)
+        return actions, status, ("posix_spawn_file_actions_init failed with status: %d"):format(status)
     end
 
-    -- Initialize attributes (empty)
-    local attr = ffi.new("posix_spawnattr_t")
-    status = ffi.C.posix_spawnattr_init(attr)
+    return actions, status, nil
+end
+
+--- @private
+--- @param actions SpawnFileActions
+local function del_file_actions(actions)
+    ffi.C.posix_spawn_file_actions_destroy(actions)
+end
+
+--- @private
+--- @return SpawnAttributes
+--- @return integer? errorcode
+--- @return string? error
+local function new_spawn_attrs()
+    --- @type SpawnAttributes
+    local attrs = ffi.new("posix_spawnattr_t")
+
+    --- @type integer
+    local status = ffi.C.posix_spawnattr_init(attrs)
+
     if status ~= 0 then
-        ffi.C.posix_spawn_file_actions_destroy(file_actions)
-        error("posix_spawnattr_init failed with status: " .. status)
+        return attrs, status, ("posix_spawnattr_init failed with status: %d"):format(status)
     end
 
-    local argv = ffi.new("char *[?]", #args + 2)
-    argv[0] = ffi.cast("char *", command)
+    return attrs, status, nil
+end
+
+--- @private
+--- @param attrs SpawnAttributes
+local function del_spawn_attrs(attrs)
+    ffi.C.posix_spawnattr_destroy(attrs)
+end
+
+--- @param command string
+--- @param args string[]
+local function argv(command, args)
+    local res = ffi.new("char *[?]", #args + 2)
+    res[0] = ffi.cast("char *", command)
     for i, v in pairs(args) do
-        argv[i] = ffi.cast("char *", v)
+        res[i] = ffi.cast("char *", v)
     end
-    argv[#args + 1] = nil
-    argv = ffi.cast("char *const *", argv)
-
-    status = ffi.C.posix_spawnp(pid, command, file_actions, attr, argv, env)
-    if status ~= 0 then
-        -- TODO: it's better to return error
-        error("posix_spawn failed with status: " .. status)
-    end
-
-    return pid[0]
+    res[#args + 1] = nil
+    res = ffi.cast("char *const *", res)
+    return res
 end
 
---- @class CosmoPortal : Portal
---- @field server TCPSocketServer
---- @field filepath string
---- @field interpretator string
---- @field command string
---- @field port integer
-sciffi.portals.cosmo = {}
+--- Spawns a subprocess using posix_spawn,
+--- uses default file actions and spawn attributes
+--- @private
+--- @param command string
+--- @param args string[]
+--- @param env string[]
+--- @return Pid
+--- @return string? err
+local function spawn(command, args, env)
+    local pid = new_pid()
+
+    local actions, _, faerr = new_file_actions()
+    if faerr then
+        return pid, faerr
+    end
+
+    local attrs, _, saerr = new_spawn_attrs()
+    if saerr then
+        del_file_actions(actions)
+        return pid, saerr
+    end
+
+    local status = ffi.C.posix_spawnp(
+        pid,
+        command,
+        actions,
+        attrs,
+        argv(command, args),
+        env
+    )
+
+    if status ~= 0 then
+        return pid, ("posix_spawn failed with status: %d"):format(status)
+    end
+
+    return pid, nil
+end
 
 --- @class CosmoPortalOpts
---- @field address string?
---- @field port integer?
---- @field filepath string
 --- @field interpretator string
 --- @field command string
+--- @field filepath string
+--- @field address string?
+--- @field port integer?
+
+--- @class CosmoPortal : CosmoPortalOpts, Portal
+--- @field server TCPSocketServer
+sciffi.portals.cosmo = {}
 
 --- @param opts CosmoPortalOpts
+--- @return CosmoPortal self
+--- @return string? err
 function sciffi.portals.cosmo.setup(opts)
     local address = opts.address or "127.0.0.1"
 
@@ -112,23 +196,23 @@ function sciffi.portals.cosmo.setup(opts)
         "Binded tcp socket to " .. address .. "with port " .. port .. "\n"
     )
 
-    local portal = {
+    return {
         setup = sciffi.portals.cosmo.setup,
         launch = sciffi.portals.cosmo.launch,
+        interpretator = opts.interpretator,
+        command = opts.command,
         filepath = opts.filepath,
+        address = opts.address,
         port = port,
         server = server,
-        interpretator = opts.interpretator,
-        command = opts.command
-    }
-    return portal, nil
+    }, nil
 end
 
 --- @param self CosmoPortal
 --- @return PortalLaunchResult
 --- @return string? error
 --- @nodiscard
-function sciffi.portals.cosmo.launch(self)
+function sciffi.portals.cosmo:launch()
     local env = environ()
     local cenv = ffi.new("char *[?]", #env + 2)
     cenv[0] = ffi.cast("char *", "SCIFFI_PORT=" .. tostring(self.port))
