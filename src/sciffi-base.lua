@@ -366,6 +366,17 @@ function sciffi.interpretators.generic.execute_script(filepath, options)
         return
     end
 
+    if options.silence == "true" then
+        local res = {}
+        for i, v in pairs(result) do
+            if v.tag ~= "tex" then
+                res[i] = v
+            end
+        end
+
+        result = res
+    end
+
     err = sciffi.helpers.handle_portal_result(result)
     if err then
         sciffi.helpers.log("error", err)
