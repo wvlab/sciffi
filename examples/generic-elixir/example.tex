@@ -1,0 +1,118 @@
+\documentclass{article}
+\usepackage{sciffi}
+
+\def\exopts{
+    command = elixir,
+    name    = generic-elixir
+}
+
+\sciffidepend{./example.exs}
+
+\begin{document}
+
+\begin{sciffi}{generic}[\exopts]
+	IO.puts("Hello from Elixir!")
+\end{sciffi}
+
+\sciffiscript{generic}{./example.exs}[\exopts]
+
+\begin{sciffi}{generic}[\exopts]
+	data = [
+        %{product: "Widget X", region_a: 342, region_b: 156, region_c: 278},
+        %{product: "Gadget Y", region_a: 189, region_b: 423, region_c: 201},
+        %{product: "Device Z", region_a: 275, region_b: 318, region_c: 194},
+        %{product: "Thingamajig", region_a: 106, region_b: 267, region_c: 352},
+        %{product: "Contraption", region_a: 423, region_b: 189, region_c: 116},
+        %{product: "Doohickey", region_a: 288, region_b: 234, region_c: 305}
+	]
+
+	template = ~S"""
+	\begin{table}[ht]
+		\centering
+		\caption{Example of EEx template usage}
+		\begin{tabular}{lrrr}
+			Products & Region A & Region B & Region C \\
+			<%= for %{product: product, region_a: a, region_b: b, region_c: c} <- data do %>
+                <%= product %> & <%= a %> & <%= b %> & <%= c %> \\
+			<% end %>
+		\end{tabular}
+	\end{table}
+	"""
+
+	template
+	|> EEx.eval_string(data: data)
+	|> IO.puts()
+\end{sciffi}
+
+\begin{sciffi}{generic}[\exopts, silence = true]
+	# We can install elixir packages inside and silence the output!
+	Mix.install([
+		{:mdex, "~> 0.2"},
+	])
+\end{sciffi}
+
+\begin{sciffi}{generic}[\exopts]
+    # we need to do it, or it won't appear inside here :(
+	Mix.install([
+		{:mdex, "~> 0.2"},
+	])
+
+	defmodule Example do
+        def to_latex(%MDEx.Document{nodes: nodes}) when is_list(nodes) do
+            nodes
+            |> Enum.map(&Example.to_latex/1)
+            |> Enum.join("\n\n")
+        end
+
+        def to_latex(%MDEx.Heading{nodes: nodes, level: 1}) when is_list(nodes) do
+            Enum.join([
+                "\\section{",
+                nodes
+                |> Enum.map(&Example.to_latex/1)
+                |> Enum.join(" "),
+                "}"
+            ], "")
+        end
+
+        def to_latex(%MDEx.Text{literal: text}) when is_binary(text),
+            do: text
+
+        def to_latex(%MDEx.Paragraph{nodes: nodes}) when is_list(nodes) do
+            nodes
+            |> Enum.map(&Example.to_latex/1)
+            |> Enum.join(" ")
+        end
+
+        def to_latex(%MDEx.List{nodes: nodes, list_type: :bullet}) when is_list(nodes) do
+            Enum.join([
+                "\\begin{itemize}",
+                nodes
+                |> Enum.map(&Example.to_latex/1)
+                |> Enum.join("\n"),
+                "\\end{itemize}"
+            ], "\n")
+        end
+
+        def to_latex(%MDEx.ListItem{nodes: nodes}) when is_list(nodes) do
+            nodes
+            |> Enum.map(&Example.to_latex/1)
+            |> then(fn nodes -> ["\\item" | nodes] end)
+            |> Enum.join(" ")
+        end
+	end
+
+	~S"""
+	# An example of using a library!
+	you can:
+	* install it
+	* use it
+	* ???
+	* profit
+	"""
+	|> MDEx.parse_document()
+    |> then(fn {:ok, doc} -> doc end)
+	|> Example.to_latex()
+    |> IO.puts()
+\end{sciffi}
+
+\end{document}
