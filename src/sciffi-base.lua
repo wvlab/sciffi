@@ -183,7 +183,13 @@ end
 --- @param output string
 --- @return nil
 function sciffi.helpers.print(output)
+    if not output:find("\n") then
+        tex.print(output)
+        return
+    end
+
     for line in output:gmatch("(.-)\n") do
+        print(output)
         tex.print(line)
     end
 end
