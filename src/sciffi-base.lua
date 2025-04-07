@@ -189,7 +189,6 @@ function sciffi.helpers.print(output)
     end
 
     for line in output:gmatch("(.-)\n") do
-        print(output)
         tex.print(line)
     end
 end
