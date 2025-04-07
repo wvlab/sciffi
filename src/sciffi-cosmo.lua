@@ -384,7 +384,23 @@ local function serve(sock, version)
         end
 
         if req.message_type == MSG_TYPE.LOG then
-            -- TODO: implement
+            local at = req.payload:find("\0")
+            if at == nil then
+                sciffi.helpers.log("error",
+                    sciffi.helpers.errformat({
+                        portal = "CosmoPortal",
+                        msg = "Wrong log request format"
+                    })
+                )
+            end
+
+            table.insert(result, {
+                tag = "log",
+                value = {
+                    level = req.payload:sub(1, at - 1),
+                    msg = req.payload:sub(at + 1, req.payload_length)
+                }
+            })
         end
 
         if req.message_type == MSG_TYPE.CLOSE then
