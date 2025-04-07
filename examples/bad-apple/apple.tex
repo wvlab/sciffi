@@ -1,0 +1,34 @@
+\documentclass{beamer}
+\usepackage{graphicx}
+\geometry{margin=0pt}
+\usepackage{sciffi-python}
+
+\setbeamertemplate{navigation symbols}{}
+
+\begin{document}
+%\sciffiscript{python}{./getframes.py}
+\begin{sciffi}{python}
+    from pathlib import Path
+    from itertools import islice
+
+    template = r"""
+    \begin{frame}[plain]
+        \centering
+        \includegraphics[width=\paperwidth,height=\paperheight]{
+            %s
+        }
+    \end{frame}
+    \clearpage
+    """
+    
+    print("\n".join(
+        map(
+            lambda x: template % str(x),
+            sorted(
+                Path("frames").glob("*.png")
+            )
+        )
+    ))
+\end{sciffi}
+\end{document}
+
