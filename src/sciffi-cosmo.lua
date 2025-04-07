@@ -52,6 +52,7 @@
 -- ]]
 --
 -- TODO: add network order
+-- TODO: refactor to have discrete parsing and io implementations
 
 require("sciffi-base")
 local socket = require("socket")
@@ -135,6 +136,7 @@ ffi.cdef([[
 ---
 --- Dependent on the os:
 ---   * Reads /proc/self/environ on linux
+---   * Reads os.env
 --- @private
 --- @return string[] environ
 --- @return string? error
@@ -151,7 +153,7 @@ local function environ()
         end
         f:close()
     else
-        return {}, ("can't read environment on OS: %s"):format(ffi.os)
+        for k, v in ipairs(os.env) do env[k] = v end
     end
 
     return env, nil
