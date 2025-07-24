@@ -3,6 +3,7 @@
 *.fls
 *.dvi
 *.pdf
+*.fdb_latexmk
 .oc
 build/
 types/
