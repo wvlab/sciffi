@@ -24,26 +24,36 @@ sciffi = {
 }
 
 -- TODO: test for subfiles
---- @class SciFFIEnv
+--- @class SciFFIEnvObject
 --- @field envname string
 --- @field lines string[]
 --- @field options string
---- @field private interpretator string
---- @field private previous_callback function | nil
---- @field private callback fun(line: string): string | nil
+--- @field interpretator string
+--- @field previous_callback function | nil
+
+--- @class SciFFIEnv
+--- @field private callback fun(env: SciFFIEnvObject): fun(line: string): string | nil
 --- @field private start fun(envname: string, interpretator: string, options: string): nil
---- @field private close fun(): nil
+--- @field private close fun(env: SciFFIEnvObject): nil
+--- @field private _state SciFFIEnvObject | nil
 sciffi.env = {
-    lines = {},
-    options = ""
+    _state = nil
 }
 
 --- @param envname string
 --- @param interpretator string
 --- @param options string
+--- @return SciFFIEnvObject | nil
 function sciffi.env.start(envname, interpretator, options)
-    sciffi.env.envname = envname
-    sciffi.env.options = options
+    --- @type SciFFIEnvObject
+    local env = {
+        envname = envname,
+        options = options,
+        lines = {},
+        interpretator = interpretator,
+        previous_callback = callback.find("process_input_buffer")
+    }
+
     if not sciffi.interpretators[interpretator] then
         sciffi.helpers.log(
             "error",
@@ -52,37 +62,41 @@ function sciffi.env.start(envname, interpretator, options)
         return
     end
 
-    sciffi.env.interpretator = interpretator
-    sciffi.env.previous_callback = callback.find("process_input_buffer")
-    local _, err = callback.register("process_input_buffer", sciffi.env.callback)
+    local _, err = callback.register("process_input_buffer", sciffi.env.callback(env))
     if err then
         sciffi.helpers.log(
             "error",
             "sciffi environment cannot register `process_input_buffer` callback"
         )
-        sciffi.env.close()
-        return
+        sciffi.env.close(env)
+        return nil
+    end
+
+    return env
+end
+
+--- @param env SciFFIEnvObject
+--- @return fun(string): string | nil
+function sciffi.env.callback(env)
+    return function(line)
+        local pos = line:find(string.format([[\end{%s}]], env.envname))
+        if not pos then
+            table.insert(env.lines, line)
+            return ""
+        end
+
+        local before = line:sub(1, pos - 1)
+        local after = line:sub(pos)
+
+        table.insert(env.lines, before)
+        return after
     end
 end
 
---- @param line string
---- @return string | nil
-function sciffi.env.callback(line)
-    local pos = line:find(string.format([[\end{%s}]], sciffi.env.envname))
-    if not pos then
-        table.insert(sciffi.env.lines, line)
-        return ""
-    end
-    local before = line:sub(1, pos - 1)
-    local after = line:sub(pos)
-
-    table.insert(sciffi.env.lines, before)
-    return after
-end
-
+--- @param env SciFFIEnvObject
 --- @return nil
-function sciffi.env.close()
-    local _, err = callback.register("process_input_buffer", sciffi.env.previous_callback)
+function sciffi.env.close(env)
+    local _, err = callback.register("process_input_buffer", env.previous_callback)
     if err then
         sciffi.helpers.log(
             "error",
@@ -92,12 +106,10 @@ function sciffi.env.close()
     end
 
     callback.previous_callback = nil
-    sciffi.interpretators[sciffi.env.interpretator].execute_snippet(
-        table.concat(sciffi.env.lines, "\n"),
-        sciffi.env.options
+    sciffi.interpretators[env.interpretator].execute_snippet(
+        table.concat(env.lines, "\n"),
+        env.options
     )
-
-    sciffi.env.lines = {}
 end
 
 function sciffi.execute_script(interpretator, script_path, options)
