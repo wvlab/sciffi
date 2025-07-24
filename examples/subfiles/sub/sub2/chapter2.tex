@@ -1,0 +1,20 @@
+\documentclass[../../example.tex]{subfiles}
+\usepackage{sciffi}
+
+\def\exopts{
+    command = elixir,
+    name    = generic-elixir-chap-2
+}
+
+\begin{document}
+
+\section{Chapter 2 — List Generation}
+
+\begin{sciffi}{generic}[\exopts]
+  for n <- 1..5 do
+    IO.puts("Item #{n}")
+  end
+\end{sciffi}
+
+\end{document}
+

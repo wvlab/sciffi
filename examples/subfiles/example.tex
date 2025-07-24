@@ -1,0 +1,24 @@
+\documentclass{article}
+\usepackage{sciffi-python}
+\usepackage{subfiles}
+
+\def\exopts{
+    command = elixir,
+    name    = generic-elixir-chap-2
+}
+
+\begin{document}
+\begin{sciffi}{python}
+    from collections.abc import Iterable
+    from pathlib import Path
+
+    p = Path("./sub")
+
+    def include(path):
+        return f"\\subfile{{{path}}}"
+
+    print("\n\n".join(
+        map(include, p.glob("**/*.tex"))
+    ))
+\end{sciffi}
+\end{document}
