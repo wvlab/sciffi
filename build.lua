@@ -35,11 +35,20 @@ uploadconfig = {
     announcement_file = "",
     description = "",
     development = true,
-    topics = { "macro-pkg" },
+    topics = { "callback" },
 }
 
 checkengines = { "luatex" }
+checkopts = "--shell-escape --interaction=nonstopmode"
 typesetexe = "lualatex"
 typesetopts = "--shell-escape --socket --interaction=nonstopmode"
+testfiledir = "test/tex"
+testsuppdir = "test/tex/supp"
 
 cleanfiles = { "*.log", "*.aux", "*.toc", "*.out" }
+
+
+if options.target == "check" then
+    local a = require("test.kit")
+    print(a)
+end
