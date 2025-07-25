@@ -1,0 +1,116 @@
+%PDF-1.7
+%Ã’¡‘≈ÿ–ƒ∆
+3 0 obj
+<< /Length 198 >>        
+stream
+BT
+/F15 9.96264 Tf
+1 0 0 1 91.925 759.927 Tm [<0022001C00620042002B>-333<0069003200620069002C>]TJ
+1 0 0 1 91.925 747.972 Tm [<003E0032004800480051>-333<003700600051004B>-333<002B001C00690035>]TJ
+ET
+endstream
+endobj
+2 0 obj
+<< /Type /Page /Contents 3 0 R /Resources 1 0 R /MediaBox [ 0 0 595.276 841.89 ] /Parent 5 0 R >>
+endobj
+1 0 obj
+<< /Font << /F15 4 0 R >> /ProcSet [ /PDF /Text ] >>
+endobj
+6 0 obj
+[ 28 [ 500 ] 34 [ 708 ] 43 [ 444 278 ] 50 [ 444 ] 53 [ 278 ] 55 [ 306 ] 62 [ 750 ] 66 [ 278 ] 72 [ 278 ] 75 [ 833 ] 81 [ 500 ] 96 [ 392 ] 98 [ 394 ] 105 [ 389 ] ]
+endobj
+8 0 obj
+<< /Length 14 >>         
+[BINARY STREAM]
+endobj
+9 0 obj
+<< /Subtype /CIDFontType0C /Length 2174 >>       
+[BINARY STREAM]
+endobj
+7 0 obj
+<< /Type /FontDescriptor /FontName /JVSAIJ+LMRoman10-Regular /Flags 4 /FontBBox [ -430 -290 1417 1127 ] /Ascent 1127 /CapHeight 683 /Descent -290 /ItalicAngle 0 /StemV 93 /XHeight 431 /FontFile3 9 0 R /CIDSet 8 0 R >>
+endobj
+10 0 obj
+<< /Length 863 >>        
+stream
+%!PS-Adobe-3.0 Resource-CMap
+%%DocumentNeededResources: ProcSet (CIDInit)
+%%IncludeResource: ProcSet (CIDInit)
+%%BeginResource: CMap (TeX-JVSAIJ-LMRoman10-Regular-0)
+%%Title: (TeX-JVSAIJ-LMRoman10-Regular-0 TeX JVSAIJ-LMRoman10-Regular 0)
+%%Version: 1.000
+%%EndComments
+/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CIDSystemInfo
+<< /Registry (TeX)
+/Ordering (JVSAIJ-LMRoman10-Regular)
+/Supplement 0
+>> def
+/CMapName /TeX-Identity-JVSAIJ-LMRoman10-Regular def
+/CMapType 2 def
+1 begincodespacerange
+<0000> <FFFF>
+endcodespacerange
+15 beginbfchar
+<001C> <0061>
+<0022> <0042>
+<002B> <0063>
+<002C> <003A>
+<0032> <0065>
+<0035> <0021>
+<0037> <0066>
+<003E> <0048>
+<0042> <0069>
+<0048> <006C>
+<004B> <006D>
+<0051> <006F>
+<0060> <0072>
+<0062> <0073>
+<0069> <0074>
+endbfchar
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end
+%%EndResource
+%%EOF
+endstream
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type0 /Encoding /Identity-H /BaseFont /JVSAIJ+LMRoman10-Regular /DescendantFonts [ 11 0 R ] /ToUnicode 10 0 R >>
+endobj
+11 0 obj
+<< /Type /Font /Subtype /CIDFontType0 /BaseFont /JVSAIJ+LMRoman10-Regular /FontDescriptor 7 0 R /W 6 0 R /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> >>
+endobj
+5 0 obj
+<< /Type /Pages  /Count 1 /Kids [ 2 0 R ] >>
+endobj
+12 0 obj
+<< /Type /Catalog /Pages 5 0 R >>
+endobj
+13 0 obj
+<< /Producer (LuaTeX) /Creator (TeX) /Trapped /False >>
+endobj
+xref
+0 14
+0000000000 65535 f 
+0000000390 00000 n 
+0000000277 00000 n 
+0000000020 00000 n 
+0000004122 00000 n 
+0000004473 00000 n 
+0000000458 00000 n 
+0000002966 00000 n 
+0000000636 00000 n 
+0000000709 00000 n 
+0000003199 00000 n 
+0000004275 00000 n 
+0000004533 00000 n 
+0000004583 00000 n 
+trailer
+<< /Size 14 /Root 12 0 R /Info 13 0 R >>
+startxref
+4655
+%%EOF

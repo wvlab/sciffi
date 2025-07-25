@@ -1,0 +1,10 @@
+\input regression-test.tex\relax
+\documentclass{minimal}
+\usepackage{sciffi}
+
+\begin{document}
+    Basic test:
+    \begin{sciffi}{generic}[command=cat]
+        Hello from cat!
+    \end{sciffi}
+\end{document}
