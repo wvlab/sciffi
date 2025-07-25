@@ -49,6 +49,7 @@ cleanfiles = { "*.log", "*.aux", "*.toc", "*.out" }
 
 
 if options.target == "check" then
-    local a = require("test.kit")
-    print(a)
+    if not require("test.kit") then
+        os.exit(1)
+    end
 end
