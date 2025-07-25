@@ -134,16 +134,21 @@ sciffi.helpers = {}
 --- @return string
 function sciffi.helpers.deindent(code)
     code = code:match("^\n*(.-)\n*$")
-
     local min_indent = math.huge
     for line in code:gmatch("[^\n]+") do
-        local leading_spaces = line:match("^(%s*)")
-        if #line > 0 then
-            min_indent = math.min(min_indent, #leading_spaces)
+        if not line:match("^%s*$") then
+            local leading_spaces = line:match("^(%s*)")
+            if #line > 0 then
+                min_indent = math.min(min_indent, #leading_spaces)
+            end
         end
     end
 
     local result = code:gsub("([^\n]+)", function(line)
+        if line:match("^%s*$") then
+            return ""
+        end
+
         return line:sub(min_indent + 1)
     end)
 
@@ -184,7 +189,7 @@ function sciffi.helpers.save_snippet(code, extension, path)
     path = path or (os.tmpname() .. (extension or ""))
     local file = io.open(path, "w")
     if not file then
-        return nil, "Error creating temporary file with code at " .. file
+        return nil, "Error creating temporary file with code at " .. path
     end
 
     file:write(code)
