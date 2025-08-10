@@ -1,10 +1,49 @@
+local fennel = require("tools.fennel")
+
 module = "sciffi"
 tdsroot = "luatex"
+
+local function endswith(str, suffix)
+    return string.sub(str, -suffix:len()) == suffix
+end
+
+local function unfuckcomments(line)
+    local comment, filename, linenum = line:match('do local _ = {";;(.-)", filename = "(.-)", line = (%d+)} end')
+    local _ = { filename, linenum }
+
+    if comment then
+        return string.format("--%s", comment)
+    end
+
+    return line
+end
+
+local function compilefennel()
+    local srcdir = "src/"
+    local fennelopts = { comments = true }
+
+    for filepath in lfs.dir(srcdir) do
+        if endswith(filepath, ".fnl") then
+            filepath = srcdir .. filepath
+            local luasrc = fennel.compileString(filepath, fennelopts)
+
+            local lines = {}
+            for line in luasrc:gmatch("[^\n]*") do
+                table.insert(lines, unfuckcomments(line))
+            end
+
+            local luafile = assert(io.open(filepath:gsub(".fnl", ".lua"), "w"))
+            luafile:write(table.concat(lines, "\n"))
+            luafile:close()
+        end
+    end
+end
 
 installfiles = {
     "sciffi.sty",
     "sciffi-python.sty",
     "sciffi-cosmo.lua",
+    "sciffi-cosmo-proto.lua",
     "sciffi-python-matplotlib.sty",
     "sciffi-base.lua",
     "sciffi-python.lua",
@@ -17,7 +56,6 @@ docfiles = {
 
 sourcefiles = {
     "src/*",
-    "build.lua",
 }
 
 typesetfiles = {
@@ -48,7 +86,11 @@ testsuppdir = "test/tex/supp"
 cleanfiles = { "*.log", "*.aux", "*.toc", "*.out" }
 
 
-if options.target == "check" then
+if options.target == "compile" then
+    compilefennel()
+end
+
+if options.target == "unittest" then
     if not require("test.kit") then
         os.exit(1)
     end
