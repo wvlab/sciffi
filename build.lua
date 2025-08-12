@@ -20,12 +20,14 @@ end
 
 local function compilefennel()
     local srcdir = "src/"
-    local fennelopts = { comments = true }
+    local fennelopts = { comments = true, useBitLib = true }
 
     for filepath in lfs.dir(srcdir) do
         if endswith(filepath, ".fnl") then
             filepath = srcdir .. filepath
-            local luasrc = fennel.compileString(filepath, fennelopts)
+            local fnlfile = assert(io.open(filepath, "r"))
+            local fnlsrc = fnlfile:read("a")
+            local luasrc = fennel.compileString(fnlsrc, fennelopts)
 
             local lines = {}
             for line in luasrc:gmatch("[^\n]*") do
@@ -42,11 +44,13 @@ end
 installfiles = {
     "sciffi.sty",
     "sciffi-python.sty",
+    "sciffi-fennel.sty",
     "sciffi-cosmo.lua",
     "sciffi-cosmo-proto.lua",
     "sciffi-python-matplotlib.sty",
     "sciffi-base.lua",
     "sciffi-python.lua",
+    "sciffi-fennel.lua",
     "sciffi-python-matplotlib.lua",
 }
 
@@ -88,6 +92,7 @@ cleanfiles = { "*.log", "*.aux", "*.toc", "*.out" }
 
 if options.target == "compile" then
     compilefennel()
+    os.exit(0)
 end
 
 if options.target == "unittest" then
