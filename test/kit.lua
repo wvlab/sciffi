@@ -13,7 +13,8 @@ function kit:modules(modules)
     return kit
 end
 
-function kit:register(name, _tags, f)
+function kit:register(name, tags, f)
+    _ = tags
     kit.tests[name] = f
 end
 
@@ -29,7 +30,10 @@ function kit:run()
             print(string.format("test %s passed", name))
         else
             failed = failed + 1
-            print(string.format("test %s failed, reason: %s", name, err))
+            print(string.format(
+                "\ntest %s failed, reason:\n %s\n",
+                name, err
+            ))
         end
     end
 

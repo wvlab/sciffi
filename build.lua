@@ -99,4 +99,6 @@ if options.target == "unittest" then
     if not require("test.kit") then
         os.exit(1)
     end
+
+    os.exit(0)
 end
