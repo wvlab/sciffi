@@ -27,6 +27,16 @@
                  :log 0x06
                  :close 0x07})
 
+;; TODO: add glue registers
+
+;;
+;;- @enum CosmoProtoRegisterType
+(local REGISTER-TYPE {:count 0x01
+                      :dimension 0x02
+                      :token 0x03
+                      :skip 0x04
+                      :attribute 0x05})
+
 ;;
 ;;- @class CosmoProtoHeader
 ;;- @field messagetag integer
@@ -34,13 +44,15 @@
 ;;- @field payloadlen integer
 ;;
 
+(local HEADER-LEN 7)
+
 ;;
 ;;- @param bytes string
-;;- @return CosmoProtoHeader|{} header
+;;- @return CosmoProtoHeader header
 ;;- @return string? error
 (fn header [bytes]
   "Parses the fixed 7-byte header into a table."
-  (if (not= (string.len bytes) 7)
+  (if (not= (string.len bytes) HEADER-LEN)
       (values {} "wrong header length")
       (let [(tag id-offset) (string.unpack ">I1" bytes 1)
             (id p-offset) (string.unpack ">I2" bytes id-offset)
@@ -58,6 +70,7 @@
 ;;- | table -- other message payload types
 ;;
 
+;;
 ;; Message Types:
 ;; handshake:   0x01 - version (2 bytes)
 ;; response:    0x02 - [1 byte code][n bytes data]
@@ -110,6 +123,10 @@
                     rest)]
     (values {:tag "log" : level : message} nil)))
 
+;;
+;;- @param header CosmoProtoHeader
+;;- @param bytes string
+;;- @return CosmoProtoPayload
 (fn payload [header bytes]
   "Parses the payload"
   (if (not= (string.len bytes) header.payloadlen)
@@ -123,4 +140,22 @@
         [MSG-TYPE.log] (values (payload-log bytes) nil)
         [MSG-TYPE.close] (values {:tag "close"} nil))))
 
-{: header : payload :MSGTYPE MSG-TYPE}
+;;
+;;- @class CosmoProtoMessage
+;;- @field header CosmoProtoHeader
+;;- @field payload CosmoProtoPayload
+;;
+
+;;
+;;- @param header CosmoProtoHeader
+;;- @param payload CosmoProtoPaylaod
+;;- @return CosmoProtoMessage message
+(fn message [header payload]
+  {: header : payload})
+
+{: header
+ : payload
+ : message
+ :HEADERLEN HEADER-LEN
+ :MSGTYPE MSG-TYPE
+ :REGISTERTYPE REGISTER-TYPE}
