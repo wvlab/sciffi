@@ -46,5 +46,6 @@ function kit:run()
 end
 
 return kit:modules({
-    "test.helpers.deindent"
-}):run()
+    "test.helpers.deindent",
+    "test.portals.cosmo.proto",
+})

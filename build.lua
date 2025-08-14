@@ -96,9 +96,6 @@ if options.target == "compile" then
 end
 
 if options.target == "unittest" then
-    if not require("test.kit") then
-        os.exit(1)
-    end
-
-    os.exit(0)
+    local ok = require("test.kit"):run()
+    os.exit(ok and 0 or 1)
 end
