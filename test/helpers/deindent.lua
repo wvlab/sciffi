@@ -1,72 +1,69 @@
 local base = require("sciffi-base")
+local t = require("test.t")
 
 return {
     {
         name = "deindent removes uniform leading indentation",
-        tags = {},
+        tags = t.tags("helpers", "helpers-deindent"),
         test = function()
             local code = base.helpers.deindent("    one\n    two\n    three")
-            assert(code == "one\ntwo\nthree", "Uniform indent should be removed")
+            t.asserteql(code, "one\ntwo\nthree")
         end
     },
     {
         name = "deindent trims surrounding blank lines",
-        tags = {},
+        tags = t.tags("helpers", "helpers-deindent"),
         test = function()
             local code = base.helpers.deindent("\n\n    line1\n    line2\n\n")
-            assert(code == "line1\nline2", "Should trim leading/trailing blank lines")
+            t.asserteql(code, "line1\nline2")
         end
     },
     {
         name = "deindent handles mixed indentation levels",
-        tags = {},
+        tags = t.tags("helpers", "helpers-deindent"),
         test = function()
             local code = base.helpers.deindent("        line1\n          line2\n        line3")
-            assert(code == "line1\n  line2\nline3", "Should preserve relative indentation")
+            t.asserteql(code, "line1\n  line2\nline3")
         end
     },
     {
         name = "deindent with no indentation",
-        tags = {},
+        tags = t.tags("helpers", "helpers-deindent"),
         test = function()
             local code = base.helpers.deindent("one\ntwo\nthree")
-            assert(code == "one\ntwo\nthree", "Should not change code with no indentation")
+            t.asserteql(code, "one\ntwo\nthree")
         end
     },
     {
         name = "deindent handles single line input",
-        tags = {},
+        tags = t.tags("helpers", "helpers-deindent"),
         test = function()
             local code = base.helpers.deindent("    only one line")
-            assert(code == "only one line", "Should strip indent on a single line")
+            t.asserteql(code, "only one line")
         end
     },
     {
         name = "deindent handles empty string",
-        tags = {},
+        tags = t.tags("helpers", "helpers-deindent"),
         test = function()
             local code = base.helpers.deindent("")
-            assert(code == "", "Empty input should return empty")
+            t.asserteql(code, "")
         end
     },
     {
         name = "deindent handles all blank lines",
-        tags = {},
+        tags = t.tags("helpers", "helpers-deindent"),
         test = function()
             local code = base.helpers.deindent("\n\n\n    \n\n")
-            assert(code == "", "Only blank lines should result in empty string")
+            t.asserteql(code, "")
         end
     },
     {
         name = "deindent handles empty newlines",
-        tags = {},
+        tags = t.tags("helpers", "helpers-deindent"),
         test = function()
             local code = base.helpers.deindent("    line1\n    line2\n\n    line3\n")
-
-            assert(
-                code == "line1\nline2\n\nline3",
-                "Should remove common indent and preserve blank lines"
-            )
+            t.asserteql(code, "line1\nline2\n\nline3")
         end
     }
 }
