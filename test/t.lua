@@ -2,16 +2,25 @@ local fennel = require("tools.fennel")
 
 local t = {}
 
-local function diff(expected, actual)
+--- @alias TestDiff
+--- | table<any, TestDiff>
+--- | {expected: any, actual: any}
+
+--- @param actual table
+--- @param expected table
+--- @return TestDiff
+local function diff(actual, expected)
     if type(expected) ~= "table" or type(actual) ~= "table" then
         if expected ~= actual then
             return { expected = expected, actual = actual }
-        else
-            return expected
         end
+
+        return expected
     end
 
+    --- @type TestDiff
     local out = {}
+
     for k, v in pairs(expected) do
         if actual[k] == nil then
             out[k] = { expected = v, actual = "<missing>" }
@@ -25,10 +34,14 @@ local function diff(expected, actual)
             out[k] = { expected = "<missing>", actual = v }
         end
     end
+
     return out
 end
 
-function t.assertdeepeql(expected, actual)
+--- @param actual table
+--- @param expected table
+--- @return nil
+function t.assertdeepeql(actual, expected)
     local function deepeq(a, b)
         if type(a) ~= type(b) then
             return false
@@ -55,64 +68,63 @@ function t.assertdeepeql(expected, actual)
 
     if not deepeq(expected, actual) then
         local differences = diff(expected, actual)
-        error("Deep equality failed:\n" .. fennel.view(differences), 2)
+        error(string.format("Deep equality failed:\n%s", fennel.view(differences)))
     end
 end
 
--- function t.assertdeepeql(v1, v2)
---     local typev1 = type(v1)
---     local typev2 = type(v2)
---     if typev1 ~= typev2 then
---         error(string.format(
---             "Expected %s (%s) and %s (%s) to have equal types",
---             fennel.view(v1), typev1,
---             fennel.view(v2), typev2
---         ))
---     end
---
---     if typev1 ~= "table" then
---         t.asserteql(v1, v2)
---     end
---
---     -- TODO what?
--- end
---
+--- @param v1 any
+--- @param v2 any
+--- @return nil
 function t.asserteql(v1, v2)
     if v1 ~= v2 then
         error(string.format("Expected %s, but got %s", fennel.view(v1), fennel.view(v2)))
     end
 end
 
+--- @param value any
+--- @return nil
 function t.assertnil(value)
     t.asserteql(nil, value)
 end
 
+--- @param value any
+--- @return nil
 function t.asserttrue(value)
     t.asserteql(true, value)
 end
 
+--- @param value any
+--- @return nil
 function t.assertfalse(value)
     t.asserteql(false, value)
 end
 
+--- @param value any
+--- @return nil
 function t.asserttruthy(value)
     if not value then
         error(string.format("Expected value to be truthy, got %s", fennel.view(value)))
     end
 end
 
+--- @param value any
+--- @return nil
 function t.assertfalsy(value)
     if value then
         error(string.format("Expected value to be falsy, got %s", fennel.view(value)))
     end
 end
 
+--- @param func any
+--- @param ... any
+--- @return any?
 function t.asserterr(func, ...)
     local ok, err = pcall(func, ...)
     if ok then
         error(string.format(
             "Expected error, but function returned successfully"
         ))
+        return
     end
 
     return err

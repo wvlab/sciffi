@@ -1,29 +1,45 @@
+--- @class TestCase
+--- @field name string
+--- @field tags [string]
+--- @field func fun(): any
+
+--- @class TestKit
+--- @field private tests table<string, TestCase>
 local kit = {
     tests = {}
 }
 
+--- @param modules [string]
+--- @return TestKit
+--- Register all test case
 function kit:modules(modules)
     for _, mod in pairs(modules) do
         local tests = require(mod)
-        for _, k in pairs(tests) do
-            kit:register(k.name, k.tags, k.test)
+        for _, test in pairs(tests) do
+            kit:case(test)
         end
     end
 
     return kit
 end
 
-function kit:register(name, tags, f)
-    _ = tags
-    kit.tests[name] = f
+--- @param test TestCase
+--- Register the test case
+function kit:case(test)
+    kit.tests[test.name] = test
 end
 
-function kit:run()
+
+--- @class TestKitOpts
+
+--- @param opts TestKitOpts
+--- @return boolean
+function kit:run(opts)
     local success = 0
     local failed = 0
 
     for name, test in pairs(kit.tests) do
-        local status, err = pcall(test)
+        local status, err = pcall(test.func())
 
         if status then
             success = success + 1
