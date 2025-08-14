@@ -72,12 +72,12 @@ function t.assertdeepeql(actual, expected)
     end
 end
 
---- @param v1 any
---- @param v2 any
+--- @param actual any
+--- @param expected any
 --- @return nil
-function t.asserteql(v1, v2)
-    if v1 ~= v2 then
-        error(string.format("Expected %s, but got %s", fennel.view(v1), fennel.view(v2)))
+function t.asserteql(actual, expected)
+    if actual ~= expected then
+        error(string.format("Expected %s, but got %s", fennel.view(expected), fennel.view(actual)))
     end
 end
 
@@ -128,6 +128,17 @@ function t.asserterr(func, ...)
     end
 
     return err
+end
+
+--- @param ...string
+--- @return table<string, true>
+function t.tags(...)
+    local r = {}
+    for _, tag in pairs({ ... }) do
+        r[tag] = true
+    end
+
+    return r
 end
 
 return t

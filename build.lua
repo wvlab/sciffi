@@ -96,6 +96,29 @@ if options.target == "compile" then
 end
 
 if options.target == "unittest" then
-    local ok = require("test.kit"):run({})
+    --- @type TestKitOpts
+    local kitopts = {
+        ignore = {},
+        only = nil,
+    }
+
+    if options.names ~= nil then
+        for _, opt in pairs(options.names) do
+            local ignoreopt = opt:match("^ignore:(%S+)")
+            if ignoreopt then
+                kitopts.ignore[ignoreopt] = true
+                goto continue
+            end
+
+            local onlyopt = opt:match("^only:(%S+)")
+            if onlyopt then
+                kitopts.only = onlyopt
+            end
+
+            ::continue::
+        end
+    end
+
+    local ok = require("test.kit"):run(kitopts)
     os.exit(ok and 0 or 1)
 end
