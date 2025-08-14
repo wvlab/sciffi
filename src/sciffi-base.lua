@@ -18,7 +18,8 @@ end
 --- @field public portals table<string, Portal>
 --- @field public helpers Helpers
 --- @field private env SciFFIEnv
---- @field private execute_script fun(interpretator, script_path, options): nil
+--- @field private execute_snippet fun(interpretator: Interpretator, code: string, options: string): nil
+--- @field private execute_script fun(interpretator: Interpretator, filepath: string, options: string): nil
 sciffi = {
     interpretators = {},
 }
@@ -254,15 +255,15 @@ end
 
 -- TODO: narrowing?
 
---- @alias PortalLaunchResult { [integer] : PortalLaunchResultField }
+--- @alias PortalLaunchResult [PortalLaunchResultField]
 --- @alias PortalLaunchResultField
 --- | { tag : "tex", value : string}
 --- | { tag : "log", value : { level : string, msg: string }}
 
 --- @generic PortalOpts
 --- @class Portal<PortalOpts>
---- @field setup fun(opts: `PortalOpts`): (SimplePortal | nil, nil | string)
---- @field launch fun(): (PortalLaunchResult | nil, nil | string)
+--- @field setup fun(opts: `PortalOpts`): (Portal<`PortalOpts`>, string?)
+--- @field launch fun(): (PortalLaunchResult, string?)
 
 --- @type table<string, Portal>
 sciffi.portals = {}

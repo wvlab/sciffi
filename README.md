@@ -10,7 +10,11 @@ cross-language workflows
 
 **Manual Installation:**
 
-1. Navigate to the root directory in your terminal and run `l3build install`
+1. Navigate to the root directory in your terminal and run 
+```sh
+l3build compile
+l3build install
+```
 
 ## Usage
 
