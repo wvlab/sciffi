@@ -1,110 +1,7 @@
--- [[
--- All messages follow this structure:
--- [1 byte ] Message tag
--- [2 bytes] Message id (should be unique)
--- [4 bytes] Payload buffer length
--- [n bytes] Payload itself
---
--- HANDSHAKE
--- 0x00 0x00 (should be the first message)
--- 0x00 0x00 0x00 0x02
--- [2 bytes] version
---
--- just a generic response from server
--- RESPONSE
--- message_id (should mirror message_id from request)
--- amount of bytes > 1
--- [1 byte ] response code
--- [n bytes] data
---
--- GETREGISTER
--- message_id
--- amount of bytes > 1
--- [1 byte ] register type
--- [n bytes] register name
--- 0x00
--- [k bytes] string
---
--- PUTREGISTER
--- message_id
--- amount of bytes
--- [1 byte ] register type
--- [n bytes] register name
--- 0x00
--- [k bytes] data
---
--- WRITE
--- message_id
--- amount of bytes
--- payload which should be valid tex
---
--- LOG
--- message_id
--- amount of bytes
--- log level
--- 0x00
--- log msg
---
--- CLOSE
--- message_id (should be the last message)
--- 0x00 0x00 0x00 0x00 (no payload)
---
--- ]]
---
--- TODO: add network order
--- TODO: refactor to have discrete parsing and io implementations
-
 require("sciffi-base")
 local socket = require("socket")
 local ffi = require("ffi")
-
-local MSG_TYPE = {
-    HANDSHAKE = 0x01,
-    RESPONSE = 0x02,
-    GETREGISTER = 0x03,
-    PUTREGISTER = 0x04,
-    WRITE = 0x05,
-    LOG = 0x06,
-    CLOSE = 0x07,
-}
-
--- TODO: add glue registers
-local REGISTER_TYPE = {
-    COUNT = 0x01,
-    DIMENSION = 0x02,
-    TOKEN = 0x03,
-    SKIP = 0x04,
-    ATTRIBUTE = 0x05,
-}
-
---- @class CosmoMessage
---- @field message_type integer
---- @field message_id integer
---- @field payload_length integer
---- @field payload string
-
---- @param bytes string
---- @return integer
-local function bytes_to_int(bytes)
-    local len = #bytes
-    local result = 0
-    for i = 1, len do
-        local byte = string.byte(bytes, i)
-        result = result + byte * 256 ^ (len - i)
-    end
-    return result
-end
-
---- @param header string
---- @return integer tag
---- @return integer message_id
---- @return integer payload_length
-local function parse_header(header)
-    return
-        bytes_to_int(string.sub(header, 1, 1)),
-        bytes_to_int(string.sub(header, 2, 3)),
-        bytes_to_int(string.sub(header, 4, 7))
-end
+local proto = require("sciffi-cosmo-proto")
 
 --- @class Pid
 --- @class SpawnFileActions
@@ -294,8 +191,7 @@ function sciffi.portals.cosmo.setup(opts)
         })
     end
 
-    local port
-    _, port = server:getsockname()
+    local _, port = server:getsockname()
 
     sciffi.helpers.log(
         "info",
@@ -315,24 +211,21 @@ function sciffi.portals.cosmo.setup(opts)
 end
 
 --- @param sock TCPSocketClient
---- @return CosmoMessage
+--- @return CosmoProtoMessage
 --- @return string? error
-local function handle_req(sock)
-    local data, err = sock:receive(7)
+local function req(sock)
+    local data, err = sock:receive(proto.HEADERLEN)
     if err or not data then
         return {}, err or "no data"
     end
 
-    local tag, msg_id, payload_len = parse_header(data)
-    local payload, perr = sock:receive(payload_len)
+    local header = proto.header(data)
+    local payloadbytes, perr = sock:receive(header.payloadlen)
     -- TODO: handle perr
+    assert(payloadbytes)
+    local payload, _ = proto.payload(header, payloadbytes)
 
-    return {
-        message_type = tag,
-        message_id = msg_id,
-        payload_length = payload_len,
-        payload = payload
-    }, nil
+    return proto.message(header, payload), nil
 end
 
 --- @param sock TCPSocketClient
@@ -341,23 +234,24 @@ end
 --- @return string? error
 local function handshake(sock, timeout)
     sock:settimeout(timeout or 1)
-    local req, err = handle_req(sock)
+    local msg, err = req(sock)
     if err then
         return 0, err
     end
-    if req.message_type ~= MSG_TYPE.HANDSHAKE then
-        return 0, "some error"
+
+    if msg.header.messagetag ~= proto.MSGTYPE.handshake then
+        return 0, string.format("invalid message tag, expected handshake (0x01), got %x", msg.header.messagetag)
     end
 
-    if req.message_id ~= 0 then
-        return 0, "some error 2"
+    if msg.header.messageid ~= 0 then
+        return 0, string.format("invalid message id, expected 0 for handshake, got %d", msg.header.messageid)
     end
 
-    if req.payload_length ~= 2 then
-        return 0, "some error 3"
+    if msg.header.payloadlen ~= 2 then
+        return 0, string.format("invalid payload len, expected 2, got %d", msg.header.payloadlen)
     end
 
-    return bytes_to_int(req.payload)
+    return msg.payload.version, nil
 end
 
 --- @param sock TCPSocketClient
@@ -370,40 +264,31 @@ local function serve(sock, version)
     local result = {}
 
     while true do
-        local req = handle_req(sock)
-        if req.message_type == MSG_TYPE.GETREGISTER then
-            -- TODO: implement
+        local msg = req(sock)
+
+        -- if msg.header.messagetag == proto.MSGTYPE.getregister then
+        --     -- TODO: implement
+        -- end
+
+        -- if msg.header.messagetag == proto.MSGTYPE.putregister then
+        --     -- TOOD: implement
+        -- end
+
+        if msg.header.messagetag == proto.MSGTYPE.write and msg.payload.tag == "write" then
+            table.insert(result, { tag = "tex", value = msg.payload.data })
         end
 
-        if req.message_type == MSG_TYPE.PUTREGISTER then
-            -- TOOD: implement
-        end
-
-        if req.message_type == MSG_TYPE.WRITE then
-            table.insert(result, { tag = "tex", value = req.payload })
-        end
-
-        if req.message_type == MSG_TYPE.LOG then
-            local at = req.payload:find("\0")
-            if at == nil then
-                sciffi.helpers.log("error",
-                    sciffi.helpers.errformat({
-                        portal = "CosmoPortal",
-                        msg = "Wrong log request format"
-                    })
-                )
-            end
-
+        if msg.header.messagetag == proto.MSGTYPE.log and msg.payload.tag == "log" then
             table.insert(result, {
                 tag = "log",
                 value = {
-                    level = req.payload:sub(1, at - 1),
-                    msg = req.payload:sub(at + 1, req.payload_length)
+                    level = msg.payload.level,
+                    msg = msg.payload.message,
                 }
             })
         end
 
-        if req.message_type == MSG_TYPE.CLOSE then
+        if msg.header.messagetag == proto.MSGTYPE.close then
             break
         end
     end
@@ -428,6 +313,7 @@ function sciffi.portals.cosmo:launch()
 
 
     local pid = spawn(self.command, { self.filepath }, cenv)
+    _ = pid
 
     local sock, err = self.server:accept()
     if err or not sock then
@@ -443,6 +329,5 @@ function sciffi.portals.cosmo:launch()
 
     sock:settimeout(1)
 
-    local r = serve(sock, version)
-    return r
+    return serve(sock, version)
 end

@@ -12,7 +12,9 @@ local function unfuckcomments(line)
     local _ = { filename, linenum }
 
     if comment then
-        return string.format("--%s", comment)
+        return string.format("--%s",
+            comment:gsub('\\"', '"') -- unfuck string literals
+        )
     end
 
     return line

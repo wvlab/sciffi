@@ -39,11 +39,12 @@
 
 ;;
 ;;- @class CosmoProtoHeader
-;;- @field messagetag integer
+;;- @field messagetag CosmoProtoMsgType
 ;;- @field messageid integer
 ;;- @field payloadlen integer
 ;;
 
+;;- @type integer
 (local HEADER-LEN 7)
 
 ;;
@@ -61,13 +62,60 @@
 
 ;;
 ;;- @class CosmoProtoPayloadHandshake
+;;- @field tag "handshake"
 ;;- @field version integer
+;;
+
+;;
+;;- @class CosmoProtoPayloadResponse
+;;- @field tag "response"
+;;- @field code integer
+;;- @field data string
+;;
+
+;;
+;;- @class CosmoProtoPayloadGetRegister
+;;- @field tag "getregister"
+;;- @field type CosmoProtoRegisterType
+;;- @field name string
+;;- @field string string
+;;
+
+;;
+;;- @class CosmoProtoPayloadPutRegister
+;;- @field tag "putregister"
+;;- @field type CosmoProtoRegisterType
+;;- @field name string
+;;- @field data string
+;;
+
+;;
+;;- @class CosmoProtoPayloadWrite
+;;- @field tag "write"
+;;- @field payload string
+;;
+
+;;
+;;- @class CosmoProtoPayloadLog
+;;- @field tag "log"
+;;- @field level integer
+;;- @field message string
+;;
+
+;;
+;;- @class CosmoProtoPayloadClose
+;;- @field tag "close"
 ;;
 
 ;;
 ;;- @alias CosmoProtoPayload
 ;;- | CosmoProtoPayloadHandshake
-;;- | table -- other message payload types
+;;- | CosmoProtoPayloadResponse
+;;- | CosmoProtoPayloadGetRegister
+;;- | CosmoProtoPayloadPutRegister
+;;- | CosmoProtoPayloadWrite
+;;- | CosmoProtoPayloadLog
+;;- | CosmoProtoPayloadClose
 ;;
 
 ;;
@@ -127,6 +175,7 @@
 ;;- @param header CosmoProtoHeader
 ;;- @param bytes string
 ;;- @return CosmoProtoPayload
+;;- @return string? error
 (fn payload [header bytes]
   "Parses the payload"
   (if (not= (string.len bytes) header.payloadlen)
@@ -138,7 +187,8 @@
         [MSG-TYPE.putregister] (values (payload-putregister bytes) nil)
         [MSG-TYPE.write] (values {:tag "write" :payload bytes} nil)
         [MSG-TYPE.log] (values (payload-log bytes) nil)
-        [MSG-TYPE.close] (values {:tag "close"} nil))))
+        [MSG-TYPE.close] (values {:tag "close"} nil)
+        [_] (values {} "unknown msg type"))))
 
 ;;
 ;;- @class CosmoProtoMessage
