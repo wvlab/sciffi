@@ -48,9 +48,7 @@
 (local HEADER-LEN 7)
 
 ;;
-;;- @param bytes string
-;;- @return CosmoProtoHeader header
-;;- @return string? error
+;;- @type fun(bytes: string): (CosmoProtoHeader, string?)
 (fn header [bytes]
   "Parses the fixed 7-byte header into a table."
   (if (not= (string.len bytes) HEADER-LEN)
@@ -118,17 +116,6 @@
 ;;- | CosmoProtoPayloadClose
 ;;
 
-;;
-;; Message Types:
-;; handshake:   0x01 - version (2 bytes)
-;; response:    0x02 - [1 byte code][n bytes data]
-;; getregister: 0x03 - [1 byte type][n bytes name][0x00][k bytes string]
-;; putregister: 0x04 - [1 byte type][n bytes name][0x00][k bytes data]
-;; write:       0x05 - raw TeX payload
-;; log:         0x06 - [1 byte level][0x00][n bytes log message]
-;; close:       0x07 - no payload
-;;
-
 (fn payload-handshake [bytes]
   (let [(version _) (string.unpack ">I2" bytes)]
     {:tag "handshake" : version}))
@@ -172,10 +159,7 @@
     (values {:tag "log" : level : message} nil)))
 
 ;;
-;;- @param header CosmoProtoHeader
-;;- @param bytes string
-;;- @return CosmoProtoPayload
-;;- @return string? error
+;;- @type fun(header: CosmoProtoHeader, bytes: string): (CosmoProtoPayload, string?)
 (fn payload [header bytes]
   "Parses the payload"
   (if (not= (string.len bytes) header.payloadlen)
@@ -197,9 +181,7 @@
 ;;
 
 ;;
-;;- @param header CosmoProtoHeader
-;;- @param payload CosmoProtoPaylaod
-;;- @return CosmoProtoMessage message
+;;- @type fun(header: CosmoProtoHeader, payload: CosmoProtoPayload): CosmoProtoMessage
 (fn message [header payload]
   {: header : payload})
 
