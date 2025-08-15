@@ -11,27 +11,36 @@ sciffi.interpretators.python = {
         sciffi.interpretators.python.execute_script(filepath, options)
     end,
     execute_script = function(filepath, options)
-        local portal, err = sciffi.portals.simple.setup({
+        local opts = sciffi.helpers.parse_options(options)
+
+        local portalmod = sciffi.portals.simple
+        if opts.portal == "cosmo" and sciffi.portals.cosmo ~= nil then
+            portalmod = sciffi.portals.cosmo
+        end
+
+        local portal, err = portalmod.setup({
             interpretator = "python",
             filepath = filepath,
             command = "python"
         })
 
         if err then
-            sciffi.helpers.log("error", err)
+            sciffi.helpers.log("error", err or "")
             return
         end
 
-        local result, err = portal:launch()
+        local result, perr = portal:launch()
         if err then
-            sciffi.helpers.log("error", err)
+            sciffi.helpers.log("error", perr or "")
             return
         end
 
-        local err = sciffi.helpers.handle_portal_result(result)
+        local rerr = sciffi.helpers.handle_portal_result(result)
         if err then
-            sciffi.helpers.log("error", err)
+            sciffi.helpers.log("error", rerr or "")
             return
         end
     end
 }
+
+return sciffi.interpretators.python

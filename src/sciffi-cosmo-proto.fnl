@@ -92,7 +92,7 @@
 ;;
 ;;- @class CosmoProtoPayloadWrite
 ;;- @field tag "write"
-;;- @field payload string
+;;- @field data string
 ;;
 
 ;;
@@ -185,7 +185,7 @@
         [MSG-TYPE.response] (values (payload-response bytes) nil)
         [MSG-TYPE.getregister] (values (payload-getregister bytes) nil)
         [MSG-TYPE.putregister] (values (payload-putregister bytes) nil)
-        [MSG-TYPE.write] (values {:tag "write" :payload bytes} nil)
+        [MSG-TYPE.write] (values {:tag "write" :data bytes} nil)
         [MSG-TYPE.log] (values (payload-log bytes) nil)
         [MSG-TYPE.close] (values {:tag "close"} nil)
         [_] (values {} "unknown msg type"))))

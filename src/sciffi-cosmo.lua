@@ -222,8 +222,7 @@ local function req(sock)
     local header = proto.header(data)
     local payloadbytes, perr = sock:receive(header.payloadlen)
     -- TODO: handle perr
-    assert(payloadbytes)
-    local payload, _ = proto.payload(header, payloadbytes)
+    local payload, _ = proto.payload(header, payloadbytes or "")
 
     return proto.message(header, payload), nil
 end
@@ -326,6 +325,7 @@ function sciffi.portals.cosmo:launch()
     end
 
     local version, herr = handshake(sock)
+    _ = herr
 
     sock:settimeout(1)
 

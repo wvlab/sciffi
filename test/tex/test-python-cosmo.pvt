@@ -1,0 +1,65 @@
+\input regression-test.tex\relax
+\documentclass{minimal}
+\usepackage{sciffi-python}
+\directlua{require("sciffi-cosmo")}
+
+\begin{document}
+    \begin{sciffi}{python}[portal=cosmo]
+        import os
+        import socket
+        import struct
+
+        MSGTYPE = {
+            "handshake": 0x01,
+            "response": 0x02,
+            "getregister": 0x03,
+            "putregister": 0x04,
+            "write": 0x05,
+            "log": 0x06,
+            "close": 0x07,
+        }
+
+        HEADER_LEN = 7  # 1 byte tag, 2 bytes id, 4 bytes payload length
+
+
+        def pack_header(msgtype, msgid, payload):
+            """Return header bytes + payload."""
+            payload_len = len(payload)
+            return struct.pack(">BHI", msgtype, msgid, payload_len) + payload
+
+
+        def msg_handshake(version):
+            payload = struct.pack(">H", version)  # version is 2 bytes
+            return pack_header(MSGTYPE["handshake"], 0, payload)
+
+
+        def msg_write(tex_code):
+            payload = tex_code.encode("utf-8")
+            return pack_header(MSGTYPE["write"], 1, payload)
+
+
+        def msg_close():
+            return pack_header(MSGTYPE["close"], 3, b"")
+
+
+        def main():
+            port = int(os.environ["SCIFFI_PORT"])
+            host = "127.0.0.1"
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((host, port))
+
+            sock.sendall(msg_handshake(1))
+
+            sock.sendall(msg_write(r"\textbf{Hello from Python!}"))
+
+            sock.sendall(msg_close())
+
+            sock.close()
+
+
+        if __name__ == "__main__":
+            main()
+        
+    \end{sciffi}
+\end{document}

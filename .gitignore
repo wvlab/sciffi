@@ -10,3 +10,4 @@ types/
 sciffi-ctan.zip
 src/sciffi-cosmo-proto.lua
 src/sciffi-fennel.lua
+tools/fennel.lua
