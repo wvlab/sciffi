@@ -310,7 +310,6 @@ function sciffi.portals.cosmo:launch()
 
     cenv = ffi.cast("char *const *", cenv)
 
-
     local pid = spawn(self.command, { self.filepath }, cenv)
     _ = pid
 

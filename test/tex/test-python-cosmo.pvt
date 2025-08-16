@@ -5,24 +5,14 @@
 
 \begin{document}
     \begin{sciffi}{python}[portal=cosmo]
-        import os
-        import socket
-        from sciffi.cosmo import message as msg
+        import asyncio
+        from sciffi.cosmo.client import Client
 
-        def main():
-            port = int(os.environ["SCIFFI_PORT"])
-            host = "127.0.0.1"
-
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect((host, port))
-
-            sock.sendall(msg.HandshakeMessage(version=0).pack(0))
-            sock.sendall(msg.WriteMessage(data=r"\textbf{Hello from Python!}").pack(1))
-            sock.sendall(msg.CloseMessage().pack(2))
-
-            sock.close()
+        async def main():
+            async with Client() as client:
+                await client.write(r"\textbf{Hello from Python!}")
 
         if __name__ == "__main__":
-            main()
+            asyncio.run(main())
     \end{sciffi}
 \end{document}
