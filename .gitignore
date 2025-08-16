@@ -11,3 +11,6 @@ sciffi-ctan.zip
 src/sciffi-cosmo-proto.lua
 src/sciffi-fennel.lua
 tools/fennel.lua
+
+bindings/python/src/*.egg-info
+bindings/python/src/.venv/
