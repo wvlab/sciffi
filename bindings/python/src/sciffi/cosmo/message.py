@@ -1,9 +1,8 @@
 import struct
-import typing
 from abc import abstractmethod
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import NamedTuple, Protocol, override
+from typing import ClassVar, NamedTuple, Protocol, override
 
 
 class MsgType(IntEnum):
@@ -27,20 +26,29 @@ class MessageHeader(NamedTuple):
 
 @dataclass
 class MessageMixin(Protocol):
+    tag: ClassVar[MsgType]
+
     @abstractmethod
     def _sciffi_pack(self) -> bytes:
         return b""
 
-    def header(self, msgid: int, plen: int) -> MessageHeader:
-        return header(msgid, plen, typing.cast(Payload, self))
+    def header(self, msgid: int = 0, plen: int = 0) -> MessageHeader:
+        return MessageHeader(tag=self.tag, id=msgid, plen=plen)
 
-    def pack(self, msgid: int) -> bytes:
-        return pack(msgid, typing.cast(Payload, self))
+    def pack(self, msgid: int = 0) -> bytes:
+        payload = self._sciffi_pack()
+        return b"".join(
+            (
+                self.header(msgid=msgid, plen=len(payload)).pack(),
+                payload,
+            )
+        )
 
 
 @dataclass
 class HandshakeMessage(MessageMixin):
     version: int
+    tag: ClassVar[MsgType] = MsgType.HANDSHAKE
 
     @override
     def _sciffi_pack(self) -> bytes:
@@ -51,6 +59,7 @@ class HandshakeMessage(MessageMixin):
 class ResponseMessage(MessageMixin):
     code: int
     data: str
+    tag: ClassVar[MsgType] = MsgType.RESPONSE
 
     @override
     def _sciffi_pack(self) -> bytes:
@@ -61,6 +70,7 @@ class ResponseMessage(MessageMixin):
 class GetRegisterMessage(MessageMixin):
     type: int
     name: str
+    tag: ClassVar[MsgType] = MsgType.GETREGISTER
 
     @override
     def _sciffi_pack(self) -> bytes:
@@ -72,6 +82,7 @@ class PutRegisterMessage(MessageMixin):
     type: int
     name: str
     data: str
+    tag: ClassVar[MsgType] = MsgType.PUTREGISTER
 
     @override
     def _sciffi_pack(self) -> bytes:
@@ -88,6 +99,7 @@ class PutRegisterMessage(MessageMixin):
 @dataclass
 class WriteMessage(MessageMixin):
     data: str
+    tag: ClassVar[MsgType] = MsgType.WRITE
 
     @override
     def _sciffi_pack(self) -> bytes:
@@ -98,6 +110,7 @@ class WriteMessage(MessageMixin):
 class LogMessage(MessageMixin):
     level: int
     message: str
+    tag: ClassVar[MsgType] = MsgType.LOG
 
     @override
     def _sciffi_pack(self) -> bytes:
@@ -112,6 +125,8 @@ class LogMessage(MessageMixin):
 
 @dataclass
 class CloseMessage(MessageMixin):
+    tag: ClassVar[MsgType] = MsgType.CLOSE
+
     def _sciffi_pack(self) -> bytes:
         return super()._sciffi_pack()
 
@@ -125,30 +140,3 @@ type Payload = (
     | LogMessage
     | CloseMessage
 )
-
-
-def msgtype(p: Payload) -> MsgType:
-    match p:
-        case HandshakeMessage():
-            return MsgType.HANDSHAKE
-        case ResponseMessage():
-            return MsgType.RESPONSE
-        case GetRegisterMessage():
-            return MsgType.GETREGISTER
-        case PutRegisterMessage():
-            return MsgType.PUTREGISTER
-        case WriteMessage():
-            return MsgType.WRITE
-        case LogMessage():
-            return MsgType.LOG
-        case CloseMessage():
-            return MsgType.CLOSE
-
-
-def header(msgid: int, plen: int, msg: Payload) -> MessageHeader:
-    return MessageHeader(tag=msgtype(msg), id=msgid, plen=plen)
-
-
-def pack(msgid: int, msg: Payload) -> bytes:
-    p = msg._sciffi_pack()
-    return msg.header(msgid, len(p)).pack() + p
