@@ -263,7 +263,10 @@ local function serve(sock, version)
     local result = {}
 
     while true do
-        local msg = req(sock)
+        local msg, err = req(sock)
+        if err ~= nil then
+            return result, err
+        end
 
         -- if msg.header.messagetag == proto.MSGTYPE.getregister then
         --     -- TODO: implement
