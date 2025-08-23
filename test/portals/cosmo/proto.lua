@@ -115,7 +115,7 @@ return {
             local p, err = proto.payload(header, data)
 
             t.assertnil(err)
-            t.assertdeepeql(p, { tag = "write", payload = "rawtex" })
+            t.assertdeepeql(p, { tag = "write", data = "rawtex" })
         end
     },
     {

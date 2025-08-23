@@ -66,7 +66,7 @@ function t.assertdeepeql(actual, expected)
         return true
     end
 
-    if not deepeq(expected, actual) then
+    if not deepeq(actual, expected) then
         local differences = diff(expected, actual)
         error(string.format("Deep equality failed:\n%s", fennel.view(differences)))
     end
