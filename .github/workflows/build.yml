@@ -1,10 +1,12 @@
 name: Build CTAN and TDS archives
 
 on:
+  workflow_dispatch:
   workflow_run:
-    workflows: ["Run tests"]
-    types: [completed]
-    branches: [main]
+    workflows: 
+      - "Run tests"
+    types: 
+      - completed
 
 jobs:
   build:
