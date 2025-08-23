@@ -16,6 +16,7 @@ jobs:
         run: l3build unittest
 
       - name: regression tests
+        timeout-minutes: 10
         run: l3build check
 
       - name: Upload test artifacts on failure
