@@ -1,0 +1,23 @@
+name: Setup python bindings
+description: Install uv and sciffi Python bindings
+
+runs:
+  using: composite
+  steps:
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: "latest"
+
+    - name: Sync dependencies and install locally
+      shell: bash
+      working-directory: bindings/python
+      run: |
+        uv sync
+        uv pip install -e .
+
+    - name: Add venv bin to PATH
+      shell: bash
+      working-directory: bindings/python
+      run: |
+        echo "$PWD/.venv/bin" >> $GITHUB_PATH

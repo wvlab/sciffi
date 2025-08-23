@@ -1,0 +1,17 @@
+name: Run tests
+
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-sciffi
+      - uses: ./.github/actions/setup-python-bindings
+
+      - name: lua tests
+        run: l3build unittest
+
+      - name: regression tests
+        run: l3build check
