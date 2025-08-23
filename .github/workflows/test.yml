@@ -17,3 +17,13 @@ jobs:
 
       - name: regression tests
         run: l3build check
+
+      - name: Upload test artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-failures-${{ github.sha }}
+          path: |
+            build/test/*.diff
+            build/test/*.log
+          retention-days: 30
