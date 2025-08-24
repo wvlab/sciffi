@@ -4,18 +4,21 @@ description: Install TeX Live and sciffi via l3build
 runs:
   using: composite
   steps:
-    - name: Install TeX Live
+    - name: Setup TeX Live
+      uses: TeX-Live/setup-texlive-action@v3
+      with:
+        packages: |
+          scheme-basic
+          latex-bin
+          collection-latexrecommended
+          l3build
+          luatex
+          alegreya
+
+    - name: Compile sciffi
       shell: bash
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          texlive-latex-base \
-          texlive-latex-extra \
-          texlive-luatex
+      run: l3build compile
 
     - name: Install sciffi
       shell: bash
-      run: |
-        l3build compile
-        l3build install
-
+      run: l3build install
