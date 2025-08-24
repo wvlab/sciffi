@@ -7,6 +7,7 @@ runs:
     - name: Setup TeX Live
       uses: TeX-Live/setup-texlive-action@v3
       with:
+        version: 2025
         packages: |
           scheme-basic
           latex-bin
