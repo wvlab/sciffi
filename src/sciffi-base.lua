@@ -253,6 +253,20 @@ function sciffi.helpers.handle_portal_result(result)
     end
 end
 
+--- @alias SciFFIEnumValue {}
+--- @alias SciFFIEnum {string: SciFFIEnumValue}
+
+--- @param ... string
+--- @return SciFFIEnum
+function sciffi.helpers.defenum(...)
+    local result = {}
+    for _, name in ipairs({ ... }) do
+        result[name] = {}
+    end
+
+    return result
+end
+
 -- TODO: narrowing?
 
 --- @alias PortalLaunchResult [PortalLaunchResultField]

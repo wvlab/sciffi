@@ -186,9 +186,18 @@ end
 --- @field port integer?
 --- @field timeout integer?
 
+
+--- @class CosmoPortalErrEnum
+--- @field procdead SciFFIEnumValue
+local errenum = sciffi.helpers.defenum(
+    "procdead"
+)
+
 --- @class CosmoPortal : CosmoPortalOpts, Portal
 --- @field server TCPSocketServer
-sciffi.portals.cosmo = {}
+sciffi.portals.cosmo = {
+    err = errenum,
+}
 
 --- @param opts CosmoPortalOpts
 --- @return CosmoPortal self
@@ -209,12 +218,11 @@ function sciffi.portals.cosmo.setup(opts)
 
     sciffi.helpers.log(
         "info",
-        "Binded tcp socket to " .. address .. "with port " .. port .. "\n"
+        ("Binded tcp socket to %s with port %d"):format(address, port)
     )
 
     return {
-        setup = sciffi.portals.cosmo.setup,
-        launch = sciffi.portals.cosmo.launch,
+        table.unpack(sciffi.portals.cosmo),
         interpretator = opts.interpretator,
         command = opts.command,
         filepath = opts.filepath,
@@ -228,12 +236,12 @@ end
 --- @param pid Pid
 --- @param sock TCPSocketClient
 --- @return CosmoProtoMessage
---- @return string? error
+--- @return SciFFIEnumValue | string error
 local function req(pid, sock)
     local data, err = sock:receive(proto.HEADERLEN)
     if err == "timeout" then
         if not is_alive(pid) then
-            return {}, "process is dead"
+            return {}, errenum.procdead
         end
     end
 
@@ -253,7 +261,7 @@ end
 --- @param sock TCPSocketClient
 --- @param timeout? number
 --- @return integer version
---- @return string? error
+--- @return SciFFIEnumValue | string? error
 local function handshake(pid, sock, timeout)
     sock:settimeout(timeout or 1)
     local msg, err = req(pid, sock)
@@ -279,7 +287,7 @@ end
 --- @param pid Pid
 --- @param sock TCPSocketClient
 --- @return PortalLaunchResult
---- @return string? error
+--- @return SciFFIEnumValue | string? error
 local function serve(pid, sock, version)
     _ = version -- for now we will ignore it
 
