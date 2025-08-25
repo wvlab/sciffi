@@ -19,7 +19,7 @@ return {
             t.assertnil(serr)
             local res, err = portal:launch()
             t.assertdeepeql(res, {})
-            t.asserteql(err, "process is dead")
+            t.asserteql(err, portal.err.procdead)
         end
     },
 }
