@@ -153,6 +153,9 @@ sciffi.err = {}
 --- @field tag SciFFIEnumValue
 --- @field format fun(self: SciFFIError): string
 --- @field data table | nil
+--- @field src string?
+--- @field fnline integer?
+--- @field line integer?
 
 --- @generic Tag: SciFFIEnumValue
 --- @generic Data: table | nil
@@ -161,10 +164,15 @@ sciffi.err = {}
 --- @param data Data
 --- @return SciFFIError
 function sciffi.err.new(tag, format, data)
+    local info = debug and debug.getinfo(2, "Sl") or {} -- 2 will get caller
+
     return {
         tag = tag,
         format = format or sciffi.err.format,
         data = data,
+        src = info.short_src or "?",
+        fnline = info.linedefined or -1,
+        line = info.currentline or -1,
     }
 end
 
@@ -313,7 +321,6 @@ end
 --- @return string
 function sciffi.helpers.fmterr(err)
     if err.tag == sciffi.helpers.err.tmpfilefail then
-        assert(err.data.path ~= nil)
         return ("Error creating temporary file with code at %s"):format(err.data.path)
     end
 
@@ -422,7 +429,6 @@ end
 --- @return string
 function sciffi.portals.simple.fmterr(err)
     if err.tag == sciffi.portals.simple.err.execfail then
-        assert(err.data.command ~= nil)
         return ("Error executing command: %s"):format(err.data.command)
     end
 
