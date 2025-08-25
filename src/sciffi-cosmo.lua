@@ -187,10 +187,13 @@ end
 --- @field timeout integer?
 
 
---- @class CosmoPortalErrEnum
---- @field procdead SciFFIEnumValue
 local errenum = sciffi.helpers.defenum(
-    "procdead"
+    "sockbindfail",
+    "procdead",
+    "invalidmsgtag",
+    "invalidmsgid",
+    "invalidpayloadlen",
+    "luasocketfail"
 )
 
 --- @class CosmoPortal : CosmoPortalOpts, Portal
@@ -207,18 +210,20 @@ function sciffi.portals.cosmo.setup(opts)
 
     local server = socket.bind(address, opts.port or 0)
     if not server then
-        return {}, sciffi.helpers.errformat({
-            interpretator = opts.interpretator,
-            portal = "CosmoPortal",
-            msg = "Error binding tcp socket to " .. address .. "with port " .. (opts.port or "0 (any)")
-        })
+        return {},
+            sciffi.err.new(
+                errenum.sockbindfail,
+                sciffi.portals.cosmo.fmterr,
+                { address = address, port = opts.port }
+            )
+            :format()
     end
 
     local _, port, _ = server:getsockname()
 
     sciffi.helpers.log(
         "info",
-        ("Binded tcp socket to %s with port %d"):format(address, port)
+        ("Binded tcp socket to %s with port %d\n"):format(address, port)
     )
 
     return {
@@ -236,22 +241,33 @@ end
 --- @param pid Pid
 --- @param sock TCPSocketClient
 --- @return CosmoProtoMessage
---- @return SciFFIEnumValue | string error
+--- @return SciFFIError? error
 local function req(pid, sock)
     local data, err = sock:receive(proto.HEADERLEN)
     if err == "timeout" then
         if not is_alive(pid) then
-            return {}, errenum.procdead
+            return {}, sciffi.err.new(errenum.procdead, sciffi.portals.cosmo.fmterr, nil)
         end
     end
 
-    if err or not data then
-        return {}, err or "no data"
+    if err or data == nil then
+        return {}, sciffi.err.new(
+            errenum.luasocketfail,
+            sciffi.portals.cosmo.fmterr,
+            { reason = err or "no data" }
+        )
     end
 
     local header = proto.header(data)
     local payloadbytes, perr = sock:receive(header.payloadlen)
-    -- TODO: handle perr
+    if perr or payloadbytes == nil then
+        return {}, sciffi.err.new(
+            errenum.luasocketfail,
+            sciffi.portals.cosmo.fmterr,
+            { reason = err or "no data" }
+        )
+    end
+
     local payload, _ = proto.payload(header, payloadbytes or "")
 
     return proto.message(header, payload), nil
@@ -261,24 +277,36 @@ end
 --- @param sock TCPSocketClient
 --- @param timeout? number
 --- @return integer version
---- @return SciFFIEnumValue | string? error
+--- @return SciFFIError? error
 local function handshake(pid, sock, timeout)
     sock:settimeout(timeout or 1)
     local msg, err = req(pid, sock)
-    if err then
+    if err ~= nil then
         return 0, err
     end
 
     if msg.header.messagetag ~= proto.MSGTYPE.handshake then
-        return 0, string.format("invalid message tag, expected handshake (0x01), got %x", msg.header.messagetag)
+        return 0, sciffi.err.new(
+            errenum.invalidmsgtag,
+            sciffi.portals.cosmo.fmterr,
+            { expected = 0x01, actual = msg.header.messagetag }
+        )
     end
 
     if msg.header.messageid ~= 0 then
-        return 0, string.format("invalid message id, expected 0 for handshake, got %d", msg.header.messageid)
+        return 0, sciffi.err.new(
+            errenum.invalidmsgtag,
+            sciffi.portals.cosmo.fmterr,
+            { expected = 0x01, actual = msg.header.messageid }
+        )
     end
 
     if msg.header.payloadlen ~= 2 then
-        return 0, string.format("invalid payload len, expected 2, got %d", msg.header.payloadlen)
+        return 0, sciffi.err.new(
+            errenum.invalidpayloadlen,
+            sciffi.portals.cosmo.fmterr,
+            { expected = 2, actual = msg.header.payloadlen }
+        )
     end
 
     return msg.payload.version, nil
@@ -287,7 +315,7 @@ end
 --- @param pid Pid
 --- @param sock TCPSocketClient
 --- @return PortalLaunchResult
---- @return SciFFIEnumValue | string? error
+--- @return SciFFIError? error
 local function serve(pid, sock, version)
     _ = version -- for now we will ignore it
 
@@ -375,7 +403,34 @@ function sciffi.portals.cosmo:launch()
     local version, herr = handshake(pid, sock)
     _ = herr
 
-    return serve(pid, sock, version)
+    local res, serr = serve(pid, sock, version)
+    return res, serr and serr:format() or nil
+end
+
+--- @param err SciFFIError
+--- @return string
+function sciffi.portals.cosmo.fmterr(err)
+    if err.tag == errenum.sockbindfail then
+        return ("Error binding tcp socket to %s with port %d"):format(err.data.address, err.data.port)
+    end
+
+    if err.tag == errenum.invalidmsgtag then
+        return ("Invalid message tag, expected %x, got %x"):format(err.data.expected, err.data.actual)
+    end
+
+    if err.tag == errenum.invalidmsgid then
+        return ("Invalid message id, expected %d, got %d"):format(err.data.expected, err.data.actual)
+    end
+
+    if err.tag == errenum.invalidpayloadlen then
+        return ("Invalid payload length, expected %d, got %d"):format(err.data.expected, err.data.actual)
+    end
+
+    if err.tag == errenum.luasocketfail then
+        return ("Lua socket receive bytes failed with following reason: %s"):format(err.data.reason)
+    end
+
+    return sciffi.err.format(err)
 end
 
 return sciffi.portals.cosmo
