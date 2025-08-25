@@ -2,6 +2,12 @@ local fennel = require("tools.fennel")
 
 local t = {}
 
+--- @param value any
+--- @return nil
+function t.view(value)
+    print(fennel.view(value))
+end
+
 --- @alias TestDiff
 --- | table<any, TestDiff>
 --- | {expected: any, actual: any}
