@@ -227,7 +227,10 @@ function sciffi.portals.cosmo.setup(opts)
     )
 
     return {
-        table.unpack(sciffi.portals.cosmo),
+        setup = sciffi.portals.cosmo.setup,
+        launch = sciffi.portals.cosmo.launch,
+        err = sciffi.portals.cosmo.err,
+        fmterr = sciffi.portals.cosmo.fmterr,
         interpretator = opts.interpretator,
         command = opts.command,
         filepath = opts.filepath,
@@ -382,7 +385,7 @@ function sciffi.portals.cosmo:launch()
         sock, err = self.server:accept()
         if err == "timeout" then
             if not is_alive(pid) then
-                return {}, "process is dead"
+                return {}, sciffi.err.new(errenum.procdead, sciffi.portals.cosmo.fmterr, nil):format()
             end
         elseif sock ~= nil then
             break
@@ -412,6 +415,10 @@ end
 function sciffi.portals.cosmo.fmterr(err)
     if err.tag == errenum.sockbindfail then
         return ("Error binding tcp socket to %s with port %d"):format(err.data.address, err.data.port)
+    end
+
+    if err.tag == errenum.procdead then
+        return "Process died before sending close"
     end
 
     if err.tag == errenum.invalidmsgtag then
