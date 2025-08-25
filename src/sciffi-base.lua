@@ -16,7 +16,8 @@ end
 --- @class (exact) SciFFI
 --- @field public interpretators table<string, Interpretator>
 --- @field public portals table<string, Portal>
---- @field public helpers Helpers
+--- @field public helpers SciFFIHelpers
+--- @field public err SciFFIErrMod
 --- @field private env SciFFIEnv
 --- @field private execute_snippet fun(interpretator: Interpretator, code: string, options: string): nil
 --- @field private execute_script fun(interpretator: Interpretator, filepath: string, options: string): nil
@@ -58,7 +59,7 @@ function sciffi.env.start(envname, interpretator, options)
     if not sciffi.interpretators[interpretator] then
         sciffi.helpers.log(
             "error",
-            "sciffi environment cannot find interpretator \"" .. interpretator .. '"'
+            ('sciffi environment cannot find interpretator "%s"'):format(interpretator)
         )
         return
     end
@@ -128,8 +129,58 @@ end
 
 -- TODO: make a helper function which creates "base" portal skeleton
 
---- @class Helpers
-sciffi.helpers = {}
+--- @class SciFFIEnumValue
+--- @field value string
+
+--- @alias SciFFIEnum { [string]: SciFFIEnumValue}
+
+--- @param ... string
+--- @return SciFFIEnum
+local function defenum(...)
+    local result = {}
+    for _, name in ipairs({ ... }) do
+        result[name] = { value = name }
+    end
+
+    return result
+end
+
+--- @class SciFFIErrMod
+sciffi.err = {}
+
+--- TODO: add motivation why
+--- @class SciFFIError
+--- @field tag SciFFIEnumValue
+--- @field format fun(self: SciFFIError): string
+--- @field data table | nil
+
+--- @generic Tag: SciFFIEnumValue
+--- @generic Data: table | nil
+--- @param tag Tag
+--- @param format (fun(self: SciFFIError): string) | nil
+--- @param data Data
+--- @return SciFFIError
+function sciffi.err.new(tag, format, data)
+    return {
+        tag = tag,
+        format = format or sciffi.err.format,
+        data = data,
+    }
+end
+
+--- @param err SciFFIError
+--- @return string
+function sciffi.err.format(err)
+    return err.tag.value
+end
+
+local helpers_errenum = defenum("tmpfilefail")
+
+--- @class SciFFIHelpers
+sciffi.helpers = {
+    err = helpers_errenum,
+    defenum = defenum,
+}
 
 --- @param code string
 --- @return string
@@ -184,13 +235,16 @@ end
 --- @param extension? string
 --- @param path? string
 --- @return string
---- @return nil
---- @overload fun(code: string, extension?: string, path?: string): (nil, string)
+--- @return SciFFIError?
 function sciffi.helpers.save_snippet(code, extension, path)
     path = path or (os.tmpname() .. (extension or ""))
     local file = io.open(path, "w")
     if not file then
-        return nil, "Error creating temporary file with code at " .. path
+        return "", sciffi.err.new(
+            sciffi.helpers.err.tmpfilefail,
+            sciffi.helpers.fmterr,
+            { path = path }
+        )
     end
 
     file:write(code)
@@ -241,7 +295,7 @@ function sciffi.helpers.errformat(opts)
 end
 
 --- @param result PortalLaunchResult
---- @return string? error
+--- @return SciFFIError? error
 --- @nodiscard
 function sciffi.helpers.handle_portal_result(result)
     for _, v in ipairs(result) do
@@ -251,20 +305,19 @@ function sciffi.helpers.handle_portal_result(result)
             sciffi.helpers.log(v.value.level, v.value.msg)
         end
     end
+
+    return nil
 end
 
---- @alias SciFFIEnumValue {}
---- @alias SciFFIEnum {string: SciFFIEnumValue}
-
---- @param ... string
---- @return SciFFIEnum
-function sciffi.helpers.defenum(...)
-    local result = {}
-    for _, name in ipairs({ ... }) do
-        result[name] = {}
+--- @param err SciFFIError
+--- @return string
+function sciffi.helpers.fmterr(err)
+    if err.tag == sciffi.helpers.err.tmpfilefail then
+        assert(err.data.path ~= nil)
+        return ("Error creating temporary file with code at %s"):format(err.data.path)
     end
 
-    return result
+    return sciffi.err.format(err)
 end
 
 -- TODO: narrowing?
@@ -288,8 +341,12 @@ sciffi.portals = {}
 --- @field filepath string
 --- @field stderrfile string?
 
+local portals_simple_errenum = defenum("execfail", "failstderr")
+
 --- @class SimplePortal : SimplePortalOpts, Portal<SimplePortalOpts>,
-sciffi.portals.simple = {}
+sciffi.portals.simple = {
+    err = portals_simple_errenum,
+}
 
 --- @param opts SimplePortalOpts
 --- @return SimplePortal portal
@@ -299,6 +356,8 @@ function sciffi.portals.simple.setup(opts)
     local portal = {
         setup = sciffi.portals.simple.setup,
         launch = sciffi.portals.simple.launch,
+        err = sciffi.portals.simple.err,
+        fmterr = sciffi.portals.simple.fmterr,
         interpretator = opts.interpretator,
         command = opts.command,
         filepath = opts.filepath,
@@ -311,15 +370,18 @@ end
 --- @return PortalLaunchResult
 --- @return string? error
 --- @nodiscard
-function sciffi.portals.simple:launch()
+function sciffi.portals.simple.launch(self)
     local com = string.format("%s %s 2> %s", self.command, self.filepath, self.stderrfile)
     local file = io.popen(com, "r")
     if not file then
-        return {}, sciffi.helpers.errformat({
-            interpretator = self.interpretator,
-            portal = "SimplePortal",
-            msg = ("Error executing command: %s"):format(self.command),
-        })
+        return {}, sciffi.err.new(
+            sciffi.portals.simple.err.execfail,
+            sciffi.portals.simple.fmterr,
+            {
+                command = self.command,
+                interpretator = self.interpretator,
+            }
+        ):format()
     end
 
     local output = file:read("*a")
@@ -356,6 +418,17 @@ function sciffi.portals.simple:launch()
     return result, nil
 end
 
+--- @param err SciFFIError
+--- @return string
+function sciffi.portals.simple.fmterr(err)
+    if err.tag == sciffi.portals.simple.err.execfail then
+        assert(err.data.command ~= nil)
+        return ("Error executing command: %s"):format(err.data.command)
+    end
+
+    return sciffi.err.format(err)
+end
+
 --- @class GenericInterpretator
 sciffi.interpretators.generic = {}
 
@@ -367,8 +440,7 @@ function sciffi.interpretators.generic.execute_snippet(code, options)
     )
 
     if err then
-        --- @cast filepath string
-        sciffi.helpers.log("error", err)
+        sciffi.helpers.log("error", err:format())
         return
     end
 
@@ -391,7 +463,7 @@ function sciffi.interpretators.generic.execute_script(filepath, options)
         command = options.command,
     })
 
-    if err or not portal then
+    if err ~= nil then
         sciffi.helpers.log("error", err or "")
         return
     end
@@ -414,9 +486,9 @@ function sciffi.interpretators.generic.execute_script(filepath, options)
         result = res
     end
 
-    err = sciffi.helpers.handle_portal_result(result)
-    if err then
-        sciffi.helpers.log("error", err)
+    local hperr = sciffi.helpers.handle_portal_result(result)
+    if hperr ~= nil then
+        sciffi.helpers.log("error", hperr:format())
         return
     end
 end
