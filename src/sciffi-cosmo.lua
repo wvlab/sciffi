@@ -225,11 +225,18 @@ function sciffi.portals.cosmo.setup(opts)
     }, nil
 end
 
+--- @param pid Pid
 --- @param sock TCPSocketClient
 --- @return CosmoProtoMessage
 --- @return string? error
-local function req(sock)
+local function req(pid, sock)
     local data, err = sock:receive(proto.HEADERLEN)
+    if err == "timeout" then
+        if not is_alive(pid) then
+            return {}, "process is dead"
+        end
+    end
+
     if err or not data then
         return {}, err or "no data"
     end
@@ -242,13 +249,14 @@ local function req(sock)
     return proto.message(header, payload), nil
 end
 
+--- @param pid Pid
 --- @param sock TCPSocketClient
 --- @param timeout? number
 --- @return integer version
 --- @return string? error
-local function handshake(sock, timeout)
+local function handshake(pid, sock, timeout)
     sock:settimeout(timeout or 1)
-    local msg, err = req(sock)
+    local msg, err = req(pid, sock)
     if err then
         return 0, err
     end
@@ -268,17 +276,18 @@ local function handshake(sock, timeout)
     return msg.payload.version, nil
 end
 
+--- @param pid Pid
 --- @param sock TCPSocketClient
 --- @return PortalLaunchResult
 --- @return string? error
-local function serve(sock, version)
+local function serve(pid, sock, version)
     _ = version -- for now we will ignore it
 
     --- @type PortalLaunchResult
     local result = {}
 
     while true do
-        local msg, err = req(sock)
+        local msg, err = req(pid, sock)
         if err ~= nil then
             return result, err
         end
@@ -355,10 +364,10 @@ function sciffi.portals.cosmo:launch()
         })
     end
 
-    local version, herr = handshake(sock)
+    local version, herr = handshake(pid, sock)
     _ = herr
 
-    return serve(sock, version)
+    return serve(pid, sock, version)
 end
 
 return sciffi.portals.cosmo
