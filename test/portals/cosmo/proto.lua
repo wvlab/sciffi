@@ -1,3 +1,4 @@
+local _ = require("sciffi-base")
 local proto = require("sciffi-cosmo-proto")
 local t = require("test.t")
 

@@ -10,6 +10,8 @@ local proto = require("sciffi-cosmo-proto")
 ffi.cdef([[
     typedef int32_t pid_t; // i am not entirely sure about this
 
+    pid_t waitpid(pid_t pid, int *stat_loc, int options);
+
     typedef struct {} posix_spawn_file_actions_t;
     typedef struct {} posix_spawnattr_t;
 
@@ -45,9 +47,11 @@ local function environ()
         if not f then
             error()
         end
+
         for str in f:read("a"):gmatch("([^\0]+)") do
             table.insert(env, str)
         end
+
         f:close()
     else
         for k, v in ipairs(os.env) do env[k] = v end
@@ -59,10 +63,19 @@ end
 --- @private
 --- @return Pid
 local function new_pid()
-    return ffi.cast(
-        "pid_t *",
-        ffi.new("pid_t[1]")
-    )
+    return ffi.cast("pid_t *", ffi.new("pid_t[1]"))
+end
+
+--- @private
+--- @param pid Pid
+--- @return boolean
+local function is_alive(pid)
+    local rc = ffi.C.waitpid(pid[0], nil, 1)
+    if rc == 0 then
+        return true
+    end
+
+    return false
 end
 
 --- @private
@@ -171,6 +184,7 @@ end
 --- @field filepath string
 --- @field address string?
 --- @field port integer?
+--- @field timeout integer?
 
 --- @class CosmoPortal : CosmoPortalOpts, Portal
 --- @field server TCPSocketServer
@@ -191,7 +205,7 @@ function sciffi.portals.cosmo.setup(opts)
         })
     end
 
-    local _, port = server:getsockname()
+    local _, port, _ = server:getsockname()
 
     sciffi.helpers.log(
         "info",
@@ -207,6 +221,7 @@ function sciffi.portals.cosmo.setup(opts)
         address = opts.address,
         port = port,
         server = server,
+        timeout = opts.timeout or 1,
     }, nil
 end
 
@@ -286,7 +301,7 @@ local function serve(sock, version)
                 value = {
                     level = msg.payload.level,
                     msg = msg.payload.message,
-                }
+                },
             })
         end
 
@@ -314,9 +329,23 @@ function sciffi.portals.cosmo:launch()
     cenv = ffi.cast("char *const *", cenv)
 
     local pid = spawn(self.command, { self.filepath }, cenv)
-    _ = pid
 
-    local sock, err = self.server:accept()
+    self.server:settimeout(self.timeout)
+
+    local sock, err
+    while true do
+        sock, err = self.server:accept()
+        if err == "timeout" then
+            if not is_alive(pid) then
+                return {}, "process is dead"
+            end
+        elseif sock ~= nil then
+            break
+        else
+            return {}, err
+        end
+    end
+
     if err or not sock then
         self.server:close()
         return {}, sciffi.helpers.errformat({
@@ -329,7 +358,7 @@ function sciffi.portals.cosmo:launch()
     local version, herr = handshake(sock)
     _ = herr
 
-    sock:settimeout(1)
-
     return serve(sock, version)
 end
+
+return sciffi.portals.cosmo

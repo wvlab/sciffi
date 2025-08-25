@@ -87,4 +87,5 @@ end
 return kit:modules({
     "test.helpers.deindent",
     "test.portals.cosmo.proto",
+    "test.portals.cosmo.usage",
 })
