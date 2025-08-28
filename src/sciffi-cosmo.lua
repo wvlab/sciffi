@@ -1,4 +1,4 @@
-require("sciffi-base")
+local sciffi = require("sciffi-base")
 local socket = require("socket")
 local ffi = require("ffi")
 local proto = require("sciffi-cosmo-proto")
@@ -17,10 +17,12 @@ ffi.cdef([[
 
     // see man posix_spawn(3)
     int posix_spawnp(
-        pid_t *pid, const char *path,
-        const posix_spawn_file_actions_t *file_actions,
+        pid_t *restrict pid,
+        const char *restrict path,
+        const posix_spawn_file_actions_t *restrict file_actions,
         const posix_spawnattr_t *attrp,
-        char *const argv[], char *const envp[]
+        char *const argv[restrict],
+        char *const envp[restrict]
     );
 
     int posix_spawn_file_actions_init(posix_spawn_file_actions_t *file_actions);
@@ -61,16 +63,11 @@ local function environ()
 end
 
 --- @private
---- @return Pid
-local function new_pid()
-    return ffi.cast("pid_t *", ffi.new("pid_t[1]"))
-end
-
---- @private
 --- @param pid Pid
 --- @return boolean
 local function is_alive(pid)
-    local rc = ffi.C.waitpid(pid[0], nil, 1)
+    local stat_loc = ffi.new("int[1]")
+    local rc = ffi.C.waitpid(pid[0], stat_loc, 1)
     if rc == 0 then
         return true
     end
@@ -130,12 +127,14 @@ end
 --- @param args string[]
 local function argv(command, args)
     local res = ffi.new("char *[?]", #args + 2)
+
     res[0] = ffi.cast("char *", command)
-    for i, v in pairs(args) do
+
+    for i, v in ipairs(args) do
         res[i] = ffi.cast("char *", v)
     end
+
     res[#args + 1] = nil
-    res = ffi.cast("char *const *", res)
     return res
 end
 
@@ -148,7 +147,7 @@ end
 --- @return Pid
 --- @return string? err
 local function spawn(command, args, env)
-    local pid = new_pid()
+    local pid = ffi.new("pid_t[1]")
 
     local actions, _, faerr = new_file_actions()
     if faerr then
@@ -157,7 +156,6 @@ local function spawn(command, args, env)
 
     local attrs = nil -- , _, saerr = new_spawn_attrs()
     -- if saerr then
-    --     del_file_actions(actions)
     --     return pid, saerr
     -- end
 
@@ -181,7 +179,7 @@ end
 --- @class CosmoPortalOpts
 --- @field interpretator string
 --- @field command string
---- @field filepath string
+--- @field args string[]?
 --- @field address string?
 --- @field port integer?
 --- @field timeout integer?
@@ -233,7 +231,7 @@ function sciffi.portals.cosmo.setup(opts)
         fmterr = sciffi.portals.cosmo.fmterr,
         interpretator = opts.interpretator,
         command = opts.command,
-        filepath = opts.filepath,
+        args = opts.args or {},
         address = opts.address,
         port = port,
         server = server,
@@ -365,18 +363,20 @@ end
 --- @return PortalLaunchResult
 --- @return string? error
 --- @nodiscard
-function sciffi.portals.cosmo:launch()
+function sciffi.portals.cosmo.launch(self)
     local env = environ()
     local cenv = ffi.new("char *[?]", #env + 2)
     cenv[0] = ffi.cast("char *", "SCIFFI_PORT=" .. tostring(self.port))
-    for i, v in pairs(env) do
+    for i, v in ipairs(env) do
         cenv[i] = ffi.cast("char *", v)
     end
     cenv[#env + 1] = nil
 
     cenv = ffi.cast("char *const *", cenv)
 
-    local pid = spawn(self.command, { self.filepath }, cenv)
+    local pid = spawn(self.command, self.args, cenv)
+
+    sciffi.helpers.log("info", ("Spawned pid: %d\n"):format(pid[0]))
 
     self.server:settimeout(self.timeout)
 

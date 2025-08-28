@@ -11,8 +11,8 @@ return {
         test = function()
             local portal, serr = cosmo.setup({
                 interpretator = "test",
-                command = 'texlua',
-                filepath = "--help",
+                command = "texlua",
+                args = { "--version" },
                 timeout = 1,
             })
 
