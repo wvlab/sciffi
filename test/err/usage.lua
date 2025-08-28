@@ -50,15 +50,19 @@ return {
         tags = t.tags("err"),
         test = function()
             local function aux()
-                return sciffi.err.new(errenum.foo, nil, nil)
+                local err = sciffi.err.new(errenum.foo, nil, nil)
+                return err
             end
 
+            local info = debug.getinfo(1, "Sl")
             local err = aux()
-            t.view(err)
             t.asserteql(err.tag, errenum.foo)
+            t.asserteql(err.fname, "aux")
             t.asserttruthy(err.src:find("usage.lua") or err.src:find("test/err/usage.lua"))
             t.asserttruthy(err.fnline > 0)
+            t.asserttruthy(err.fnline > info.linedefined)
             t.asserttruthy(err.line > 0)
+            t.asserttruthy(err.line < info.currentline)
         end
     },
 }

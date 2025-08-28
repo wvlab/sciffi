@@ -21,9 +21,7 @@ end
 --- @field private env SciFFIEnv
 --- @field private execute_snippet fun(interpretator: Interpretator, code: string, options: string): nil
 --- @field private execute_script fun(interpretator: Interpretator, filepath: string, options: string): nil
-sciffi = {
-    interpretators = {},
-}
+sciffi = {}
 
 -- TODO: test for subfiles
 --- @class SciFFIEnvObject
@@ -153,9 +151,10 @@ sciffi.err = {}
 --- @field tag SciFFIEnumValue
 --- @field format fun(self: SciFFIError): string
 --- @field data table | nil
---- @field src string?
---- @field fnline integer?
---- @field line integer?
+--- @field src string
+--- @field fname string
+--- @field fnline integer
+--- @field line integer
 
 --- @generic Tag: SciFFIEnumValue
 --- @generic Data: table | nil
@@ -164,13 +163,14 @@ sciffi.err = {}
 --- @param data Data
 --- @return SciFFIError
 function sciffi.err.new(tag, format, data)
-    local info = debug and debug.getinfo(2, "Sl") or {} -- 2 will get caller
+    local info = debug and debug.getinfo(2, "Sln") or {} -- 2 will get caller
 
     return {
         tag = tag,
         format = format or sciffi.err.format,
         data = data,
         src = info.short_src or "?",
+        fname = info.name or "?",
         fnline = info.linedefined or -1,
         line = info.currentline or -1,
     }
@@ -336,8 +336,8 @@ end
 
 --- @generic PortalOpts
 --- @class Portal<PortalOpts>
---- @field setup fun(opts: `PortalOpts`): (Portal<`PortalOpts`>, string?)
---- @field launch fun(): (PortalLaunchResult, string?)
+--- @field setup fun(opts: `PortalOpts`): (Portal<`PortalOpts`>, SciFFIError?)
+--- @field launch fun(): (PortalLaunchResult, SciFFIError?)
 
 --- @type table<string, Portal>
 sciffi.portals = {}
@@ -357,7 +357,7 @@ sciffi.portals.simple = {
 
 --- @param opts SimplePortalOpts
 --- @return SimplePortal portal
---- @return string? error
+--- @return SciFFIError? error
 --- @nodiscard
 function sciffi.portals.simple.setup(opts)
     local portal = {
@@ -375,7 +375,7 @@ end
 
 --- @param self SimplePortal
 --- @return PortalLaunchResult
---- @return string? error
+--- @return SciFFIError? error
 --- @nodiscard
 function sciffi.portals.simple.launch(self)
     local com = string.format("%s %s 2> %s", self.command, self.filepath, self.stderrfile)
@@ -388,7 +388,7 @@ function sciffi.portals.simple.launch(self)
                 command = self.command,
                 interpretator = self.interpretator,
             }
-        ):format()
+        )
     end
 
     local output = file:read("*a")
@@ -435,6 +435,9 @@ function sciffi.portals.simple.fmterr(err)
     return sciffi.err.format(err)
 end
 
+--- @type table<string, Interpretator>
+sciffi.interpretators = {}
+
 --- @class GenericInterpretator
 sciffi.interpretators.generic = {}
 
@@ -470,14 +473,13 @@ function sciffi.interpretators.generic.execute_script(filepath, options)
     })
 
     if err ~= nil then
-        sciffi.helpers.log("error", err or "")
+        sciffi.helpers.log("error", err:format())
         return
     end
 
-    local result
-    result, err = portal:launch()
-    if err then
-        sciffi.helpers.log("error", err)
+    local result, lerr = portal:launch()
+    if lerr ~= nil then
+        sciffi.helpers.log("error", lerr:format())
         return
     end
 
