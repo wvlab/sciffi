@@ -253,22 +253,31 @@ local function req(pid, sock)
         end
     end
 
-    if err or data == nil then
+    if err then
         return {}, sciffi.err.new(
             errenum.luasocketfail,
             sciffi.portals.cosmo.fmterr,
-            { reason = err or "no data" }
+            { reason = err }
         )
     end
 
+    if data == nil then
+        return nil, nil
+    end
+
     local header = proto.header(data)
-    local payloadbytes, perr = sock:receive(header.payloadlen)
-    if perr or payloadbytes == nil then
-        return {}, sciffi.err.new(
-            errenum.luasocketfail,
-            sciffi.portals.cosmo.fmterr,
-            { reason = err or "no data" }
-        )
+    local payloadbytes, perr
+    if header.payloadlen ~= 0 then
+        payloadbytes, perr = sock:receive(header.payloadlen)
+        if perr then
+            return {}, sciffi.err.new(
+                errenum.luasocketfail,
+                sciffi.portals.cosmo.fmterr,
+                { reason = err }
+            )
+        end
+    else
+        payloadbytes, perr = "", nil
     end
 
     local payload, _ = proto.payload(header, payloadbytes or "")
@@ -278,14 +287,15 @@ end
 
 --- @param pid Pid
 --- @param sock TCPSocketClient
---- @param timeout? number
 --- @return integer version
 --- @return SciFFIError? error
-local function handshake(pid, sock, timeout)
-    sock:settimeout(timeout or 1)
-    local msg, err = req(pid, sock)
-    if err ~= nil then
-        return 0, err
+local function handshake(pid, sock)
+    local msg, err
+    while msg == nil do
+        msg, err = req(pid, sock)
+        if err ~= nil then
+            return 0, err
+        end
     end
 
     if msg.header.messagetag ~= proto.MSGTYPE.handshake then
@@ -331,6 +341,10 @@ local function serve(pid, sock, version)
             return result, err
         end
 
+        if msg == nil then
+            goto continue
+        end
+
         -- if msg.header.messagetag == proto.MSGTYPE.getregister then
         --     -- TODO: implement
         -- end
@@ -354,11 +368,11 @@ local function serve(pid, sock, version)
         end
 
         if msg.header.messagetag == proto.MSGTYPE.close then
-            break
+            return result, nil
         end
-    end
 
-    return result, nil
+        ::continue::
+    end
 end
 
 --- @param self CosmoPortal
