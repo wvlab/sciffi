@@ -155,11 +155,11 @@ local function spawn(command, args, env)
         return pid, faerr
     end
 
-    local attrs, _, saerr = new_spawn_attrs()
-    if saerr then
-        del_file_actions(actions)
-        return pid, saerr
-    end
+    local attrs = nil -- , _, saerr = new_spawn_attrs()
+    -- if saerr then
+    --     del_file_actions(actions)
+    --     return pid, saerr
+    -- end
 
     local status = ffi.C.posix_spawnp(
         pid,
