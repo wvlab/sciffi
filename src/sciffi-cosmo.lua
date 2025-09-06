@@ -181,7 +181,7 @@ end
 --- @class CosmoPortalOpts
 --- @field interpretator string
 --- @field command string
---- @field filepath string
+--- @field args string[]
 --- @field address string?
 --- @field port integer?
 --- @field timeout integer?
@@ -233,7 +233,7 @@ function sciffi.portals.cosmo.setup(opts)
         fmterr = sciffi.portals.cosmo.fmterr,
         interpretator = opts.interpretator,
         command = opts.command,
-        filepath = opts.filepath,
+        args = opts.args,
         address = opts.address,
         port = port,
         server = server,
@@ -243,7 +243,7 @@ end
 
 --- @param pid Pid
 --- @param sock TCPSocketClient
---- @return CosmoProtoMessage
+--- @return CosmoProtoMessage?
 --- @return SciFFIError? error
 local function req(pid, sock)
     local data, err = sock:receive(proto.HEADERLEN)
@@ -376,7 +376,7 @@ function sciffi.portals.cosmo:launch()
 
     cenv = ffi.cast("char *const *", cenv)
 
-    local pid = spawn(self.command, { self.filepath }, cenv)
+    local pid = spawn(self.command, self.args, cenv)
 
     self.server:settimeout(self.timeout)
 

@@ -54,7 +54,6 @@ return {
             end
 
             local err = aux()
-            t.view(err)
             t.asserteql(err.tag, errenum.foo)
             t.asserttruthy(err.src:find("usage.lua") or err.src:find("test/err/usage.lua"))
             t.asserttruthy(err.fnline > 0)

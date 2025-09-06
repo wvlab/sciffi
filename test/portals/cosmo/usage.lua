@@ -12,7 +12,7 @@ return {
             local portal, serr = cosmo.setup({
                 interpretator = "test",
                 command = 'texlua',
-                filepath = "--help",
+                args = { "--help" },
                 timeout = 1,
             })
 
