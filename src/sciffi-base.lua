@@ -336,8 +336,8 @@ end
 
 --- @generic PortalOpts
 --- @class Portal<PortalOpts>
---- @field setup fun(opts: `PortalOpts`): (Portal<`PortalOpts`>, string?)
---- @field launch fun(): (PortalLaunchResult, string?)
+--- @field setup fun(opts: `PortalOpts`): (Portal<`PortalOpts`>, SciFFIError?)
+--- @field launch fun(): (PortalLaunchResult, SciFFIError?)
 
 --- @type table<string, Portal>
 sciffi.portals = {}
@@ -357,7 +357,7 @@ sciffi.portals.simple = {
 
 --- @param opts SimplePortalOpts
 --- @return SimplePortal portal
---- @return string? error
+--- @return SciFFIError? error
 --- @nodiscard
 function sciffi.portals.simple.setup(opts)
     local portal = {
@@ -375,7 +375,7 @@ end
 
 --- @param self SimplePortal
 --- @return PortalLaunchResult
---- @return string? error
+--- @return SciFFIError? error
 --- @nodiscard
 function sciffi.portals.simple.launch(self)
     local com = string.format("%s %s 2> %s", self.command, self.filepath, self.stderrfile)
@@ -385,10 +385,10 @@ function sciffi.portals.simple.launch(self)
             sciffi.portals.simple.err.execfail,
             sciffi.portals.simple.fmterr,
             {
-                command = self.command,
+                command = com,
                 interpretator = self.interpretator,
             }
-        ):format()
+        )
     end
 
     local output = file:read("*a")
@@ -463,21 +463,20 @@ function sciffi.interpretators.generic.execute_script(filepath, options)
         }))
     end
 
-    local portal, err = sciffi.portals.simple.setup({
+    local portal, setuperr = sciffi.portals.simple.setup({
         interpretator = options.name or "generic",
         filepath = filepath,
         command = options.command,
     })
 
-    if err ~= nil then
-        sciffi.helpers.log("error", err or "")
+    if setuperr then
+        sciffi.helpers.log("error", setuperr:format())
         return
     end
 
-    local result
-    result, err = portal:launch()
+    local result, err = portal:launch()
     if err then
-        sciffi.helpers.log("error", err)
+        sciffi.helpers.log("error", err:format())
         return
     end
 
@@ -493,7 +492,7 @@ function sciffi.interpretators.generic.execute_script(filepath, options)
     end
 
     local hperr = sciffi.helpers.handle_portal_result(result)
-    if hperr ~= nil then
+    if hperr then
         sciffi.helpers.log("error", hperr:format())
         return
     end

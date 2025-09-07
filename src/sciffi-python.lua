@@ -37,7 +37,7 @@ function sciffi.interpretators.python.execute_script(filepath, options)
     end
 
     if setuperr then
-        sciffi.helpers.log("error", setuperr)
+        sciffi.helpers.log("error", setuperr:format())
         return
     end
 

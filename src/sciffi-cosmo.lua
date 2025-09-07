@@ -3,6 +3,18 @@ local socket = require("socket")
 local ffi = require("ffi")
 local proto = require("sciffi-cosmo-proto")
 
+local errenum = sciffi.helpers.defenum(
+    "sockbindfail",
+    "sockacceptfail",
+    "procdead",
+    "spawnflinitfail",
+    "spawnfail",
+    "invalidmsgtag",
+    "invalidmsgid",
+    "invalidpayloadlen",
+    "luasocketfail"
+)
+
 --- @class Pid
 --- @class SpawnFileActions
 --- @class SpawnAttributes
@@ -80,8 +92,7 @@ end
 
 --- @private
 --- @return SpawnFileActions
---- @return integer? errorcode
---- @return string? error
+--- @return SciFFIError? error
 local function new_file_actions()
     --- @type SpawnFileActions
     local actions = ffi.new("posix_spawn_file_actions_t")
@@ -90,10 +101,14 @@ local function new_file_actions()
     local status = ffi.C.posix_spawn_file_actions_init(actions)
 
     if status ~= 0 then
-        return actions, status, ("posix_spawn_file_actions_init failed with status: %d"):format(status)
+        return actions, sciffi.err.new(
+            errenum.spawnflinitfail,
+            sciffi.portals.cosmo.fmterr,
+            { status = status }
+        )
     end
 
-    return actions, status, nil
+    return actions, nil
 end
 
 --- @private
@@ -146,11 +161,11 @@ end
 --- @param args string[]
 --- @param env string[]
 --- @return Pid
---- @return string? err
+--- @return SciFFIError? err
 local function spawn(command, args, env)
     local pid = new_pid()
 
-    local actions, _, faerr = new_file_actions()
+    local actions, faerr = new_file_actions()
     if faerr then
         return pid, faerr
     end
@@ -171,7 +186,11 @@ local function spawn(command, args, env)
     )
 
     if status ~= 0 then
-        return pid, ("posix_spawn failed with status: %d"):format(status)
+        return pid, sciffi.err.new(
+            errenum.spawnfail,
+            sciffi.portals.cosmo.fmterr,
+            { status = status }
+        )
     end
 
     return pid, nil
@@ -187,15 +206,6 @@ end
 --- @field timeout integer?
 
 
-local errenum = sciffi.helpers.defenum(
-    "sockbindfail",
-    "procdead",
-    "invalidmsgtag",
-    "invalidmsgid",
-    "invalidpayloadlen",
-    "luasocketfail"
-)
-
 --- @class CosmoPortal : CosmoPortalOpts, Portal
 --- @field server TCPSocketServer
 sciffi.portals.cosmo = {
@@ -204,7 +214,7 @@ sciffi.portals.cosmo = {
 
 --- @param opts CosmoPortalOpts
 --- @return CosmoPortal self
---- @return string? err
+--- @return SciFFIError? err
 function sciffi.portals.cosmo.setup(opts)
     local address = opts.address or "127.0.0.1"
 
@@ -216,7 +226,6 @@ function sciffi.portals.cosmo.setup(opts)
                 sciffi.portals.cosmo.fmterr,
                 { address = address, port = opts.port }
             )
-            :format()
     end
 
     local _, port, _ = server:getsockname()
@@ -377,9 +386,9 @@ end
 
 --- @param self CosmoPortal
 --- @return PortalLaunchResult
---- @return string? error
+--- @return SciFFIError? error
 --- @nodiscard
-function sciffi.portals.cosmo:launch()
+function sciffi.portals.cosmo.launch(self)
     local env = environ()
     local cenv = ffi.new("char *[?]", #env + 2)
     cenv[0] = ffi.cast("char *", "SCIFFI_PORT=" .. tostring(self.port))
@@ -390,7 +399,10 @@ function sciffi.portals.cosmo:launch()
 
     cenv = ffi.cast("char *const *", cenv)
 
-    local pid = spawn(self.command, self.args, cenv)
+    local pid, spawnerr = spawn(self.command, self.args, cenv)
+    if spawnerr then
+        return {}, spawnerr
+    end
 
     self.server:settimeout(self.timeout)
 
@@ -399,29 +411,33 @@ function sciffi.portals.cosmo:launch()
         sock, err = self.server:accept()
         if err == "timeout" then
             if not is_alive(pid) then
-                return {}, sciffi.err.new(errenum.procdead, sciffi.portals.cosmo.fmterr, nil):format()
+                return {}, sciffi.err.new(
+                    errenum.procdead,
+                    sciffi.portals.cosmo.fmterr,
+                    {}
+                )
             end
-        elseif sock ~= nil then
+        end
+
+        if err then
+            return {}, sciffi.err.new(
+                errenum.sockacceptfail,
+                sciffi.portals.cosmo.fmterr,
+                { reason = err }
+            )
+        end
+
+        if sock ~= nil then
             break
-        else
-            return {}, err
         end
     end
 
-    if err or not sock then
-        self.server:close()
-        return {}, sciffi.helpers.errformat({
-            interpretator = self.interpretator,
-            portal = "CosmoPortal",
-            msg = "Error executing command " .. self.command
-        })
-    end
+    assert(sock ~= nil)
 
     local version, herr = handshake(pid, sock)
     _ = herr
 
-    local res, serr = serve(pid, sock, version)
-    return res, serr and serr:format() or nil
+    return serve(pid, sock, version)
 end
 
 --- @param err SciFFIError
@@ -429,6 +445,18 @@ end
 function sciffi.portals.cosmo.fmterr(err)
     if err.tag == errenum.sockbindfail then
         return ("Error binding tcp socket to %s with port %d"):format(err.data.address, err.data.port)
+    end
+
+    if err.tag == errenum.sockbindfail then
+        return ("Error accepting tcp socket connection, reason: %s"):format(err.data.reason)
+    end
+
+    if err.tag == errenum.spawnflinitfail then
+        return ("posix_spawn_file_actions_init failed with status: %d"):format(err.data.status)
+    end
+
+    if err.tag == errenum.spawnfail then
+        return ("posix_spawn failed with status: %d"):format(err.data.status)
     end
 
     if err.tag == errenum.procdead then
