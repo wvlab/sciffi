@@ -54,6 +54,7 @@ installfiles = {
     "sciffi-python.lua",
     "sciffi-fennel.lua",
     "sciffi-python-matplotlib.lua",
+    "sciffi-memo*.lua",
 }
 
 docfiles = {

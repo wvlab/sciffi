@@ -16,6 +16,7 @@ end
 --- @class (exact) SciFFI
 --- @field public interpretators table<string, Interpretator>
 --- @field public portals table<string, Portal>
+--- @field public memo SciFFIMemo?
 --- @field public helpers SciFFIHelpers
 --- @field public err SciFFIErrMod
 --- @field private env SciFFIEnv
@@ -23,6 +24,7 @@ end
 --- @field private execute_script fun(interpretator: Interpretator, filepath: string, options: string): nil
 sciffi = {
     interpretators = {},
+    memo = nil,
 }
 
 -- TODO: test for subfiles

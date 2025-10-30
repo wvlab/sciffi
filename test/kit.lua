@@ -89,4 +89,6 @@ return kit:modules({
     "test.portals.cosmo.proto",
     "test.portals.cosmo.usage",
     "test.err.usage",
+    "test.memo.hash",
+    "test.memo.memio"
 })
