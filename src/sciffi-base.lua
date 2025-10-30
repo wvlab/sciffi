@@ -355,11 +355,13 @@ end
 --- @type table<string, Portal>
 sciffi.portals = {}
 
+-- TODO: add ability to pass memo io table directly to memo
 --- @class SimplePortalOpts
 --- @field interpretator string
 --- @field command string
 --- @field filepath string
 --- @field stderrfile string?
+--- @field memo string?
 
 local portals_simple_errenum = defenum("execfail", "failstderr")
 
@@ -382,8 +384,66 @@ function sciffi.portals.simple.setup(opts)
         command = opts.command,
         filepath = opts.filepath,
         stderrfile = opts.stderrfile or os.tmpname(),
+        memo = opts.memo,
     }
     return portal, nil
+end
+
+function sciffi.portals.simple.memoimpl(self)
+    local memoimpl = self.memo or "fs"
+    local mio = sciffi.memo.io[memoimpl]
+    if mio == nil then
+        sciffi.helpers.log("error", sciffi.helpers.errformat({
+            interpretator = self.interpretator,
+            msg = ("Can't choose memo implementation '%s'"):format(memoimpl),
+        }))
+        return nil
+    end
+
+    sciffi.helpers.log("debug", sciffi.helpers.errformat({
+        interpretator = self.interpretator,
+        msg = ("Successfully loaded %s memo io implementation"):format(memoimpl),
+    }))
+
+    return mio
+end
+
+--- @private
+--- @param self SimplePortal
+--- @param mio SciFFIMemoIO?
+--- @return PortalLaunchResult?
+--- @nodiscard
+function sciffi.portals.simple.lookupmemo(self, mio)
+    if sciffi.memo == nil then
+        sciffi.helpers.log("debug", sciffi.helpers.errformat({
+            interpretator = self.interpretator,
+            msg = "Memo module hasn't been loaded",
+        }))
+        return nil
+    end
+
+    local output, memoerr = sciffi.memo.lookupfile(mio, self.filepath)
+    if memoerr ~= nil then
+        sciffi.helpers.log("error", sciffi.helpers.errformat({
+            interpretator = self.interpretator,
+            msg = ("Error while trying to lookup memoized output %s"):format(memoerr:format()),
+        }))
+
+        return nil
+    end
+
+    if output == nil then
+        sciffi.helpers.log("debug", sciffi.helpers.errformat({
+            interpretator = self.interpretator,
+            msg = "Couldn't find memoized output",
+        }))
+
+        return nil
+    end
+
+    return {
+        { tag = "tex", value = output },
+    }
 end
 
 --- @param self SimplePortal
@@ -391,6 +451,12 @@ end
 --- @return SciFFIError? error
 --- @nodiscard
 function sciffi.portals.simple.launch(self)
+    local mio = sciffi.portals.simple.memoimpl(self)
+    local cachedresult = sciffi.portals.simple.lookupmemo(self, mio)
+    if cachedresult ~= nil then
+        return cachedresult
+    end
+
     local com = string.format("%s %s 2> %s", self.command, self.filepath, self.stderrfile)
     local file = io.popen(com, "r")
     if not file then
@@ -421,9 +487,7 @@ function sciffi.portals.simple.launch(self)
     })
 
     local result = {
-        {
-            tag = "tex", value = output
-        },
+        { tag = "tex", value = output },
     }
 
     if stderroutput ~= "" then
@@ -433,6 +497,13 @@ function sciffi.portals.simple.launch(self)
                 level = "warning", msg = errmsg
             },
         })
+    end
+
+    if sciffi.memo ~= nil and mio ~= nil then
+        local memowrerr = sciffi.memo.writefile(mio, self.filepath, output)
+        if memowrerr ~= nil then
+            sciffi.helpers.log("error", memowrerr:format())
+        end
     end
 
     return result, nil
