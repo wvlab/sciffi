@@ -329,10 +329,21 @@ end
 
 -- TODO: narrowing?
 
+--- @class PortalLaunchResultTex
+--- @field tag "tex"
+--- @field value string
+
+--- @class PortalLaunchResultLog
+--- @field tag "log"
+--- @field value {
+---     level: string,
+---     msg: string,
+--- }
+
 --- @alias PortalLaunchResult [PortalLaunchResultField]
 --- @alias PortalLaunchResultField
---- | { tag : "tex", value : string}
---- | { tag : "log", value : { level : string, msg: string }}
+--- | PortalLaunchResultTex
+--- | PortalLaunchResultLog
 
 --- @generic PortalOpts
 --- @class Portal<PortalOpts>
