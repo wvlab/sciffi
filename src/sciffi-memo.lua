@@ -16,8 +16,10 @@ local errenum = sciffi.helpers.defenum(
 
 --- @class SciFFIMemo
 --- @field err SciFFIEnum
+--- @field io table<string, SciFFIMemoIO>
 local memo = {
     err = errenum,
+    io = {},
 }
 
 --- @param code string
@@ -30,6 +32,24 @@ function memo.hash(code)
     return result
 end
 
+--- @param path string
+--- @return string, SciFFIError?
+function memo.hashfile(path)
+    local file = io.open(path)
+    if not file then
+        return "", sciffi.err.new(
+            sciffi.memo.err.openfail,
+            sciffi.err.format,
+            { path = path }
+        )
+    end
+
+    local code = file:read("*a")
+    file:close()
+
+    return memo.hash(code)
+end
+
 --- @param mio SciFFIMemoIO
 --- @param code string
 --- @param result string
@@ -40,10 +60,24 @@ function memo.write(mio, code, result)
 end
 
 --- @param mio SciFFIMemoIO
+--- @param path string
+--- @param result string
+--- @return SciFFIError?
+function memo.writefile(mio, path, result)
+    local hash = sciffi.memo.hashfile(path)
+    return mio.write(hash, result)
+end
+
+--- @param mio SciFFIMemoIO
 --- @param code string
 --- @return string?, SciFFIError?
 function memo.lookup(mio, code)
     local hash = sciffi.memo.hash(code)
+    return mio.lookup(hash)
+end
+
+function memo.lookupfile(mio, path)
+    local hash = sciffi.memo.hashfile(path)
     return mio.lookup(hash)
 end
 

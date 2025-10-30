@@ -2,21 +2,22 @@ local sciffi = require("sciffi-base")
 local memo = require("sciffi-memo")
 
 --- @class SciFFIMemoFSIO : SciFFIMemoIO
-local fsio = {}
+memo.io.fs = {}
 
-function fsio.path(hash)
+function memo.io.fs.path(hash)
     return ("_sciffi/%s"):format(hash)
 end
 
-function fsio.resultpath(hash)
+function memo.io.fs.resultpath(hash)
     return ("_sciffi/%s/result"):format(hash)
 end
 
-function fsio.write(hash, result)
+function memo.io.fs.write(hash, result)
     -- TODO: handle mkdir fails
     lfs.mkdir("_sciffi")
-    lfs.mkdir(fsio.path(hash))
-    local path = fsio.resultpath(hash)
+    lfs.mkdir(memo.io.fs.path(hash))
+    sciffi.helpers.log("warning", "I AM HERE BLYAT")
+    local path = memo.io.fs.resultpath(hash)
     local file = io.open(path, "w")
     if not file then
         return sciffi.err.new(
@@ -31,8 +32,8 @@ function fsio.write(hash, result)
     return nil
 end
 
-function fsio.lookup(hash)
-    local rpath = fsio.resultpath(hash)
+function memo.io.fs.lookup(hash)
+    local rpath = memo.io.fs.resultpath(hash)
     if not lfs.isfound(rpath) then
         return nil, nil
     end
@@ -51,4 +52,4 @@ function fsio.lookup(hash)
     return result, nil
 end
 
-return fsio
+return memo.io.fs
